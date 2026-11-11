@@ -1,0 +1,100 @@
+// Pruebas del motor de cálculo contra las fórmulas del Excel original.
+// Ejecutar: node tests/calc.test.js
+const assert = require('assert');
+const C = require('../js/calc.js');
+
+let passed = 0;
+function test(name, fn) {
+  try { fn(); passed++; console.log('ok  -', name); }
+  catch (e) { console.error('FAIL-', name, '\n     ', e.message); process.exitCode = 1; }
+}
+const close = (a, b, eps = 1e-6) => assert.ok(Math.abs(a - b) < eps, `${a} != ${b}`);
+
+test('Filtro General: reglas del Excel', () => {
+  const r = C.evaluateFilter('general', { perHist: 20, pfcfHist: 31, per: 18, pfcf: 25, evEbitda: 18,
+    revCagr: 12, epsCagr: 10, ndE: 1, roic: 16, buyback: 0, dividend: 1, fcfMargin: 20 });
+  const pass = Object.fromEntries(r.rows.map(x => [x.key, x.pass]));
+  assert.deepStrictEqual(pass, { perHist: true, pfcfHist: false, per: true, pfcf: true, evEbitda: false,
+    revCagr: true, epsCagr: false, ndE: true, roic: true, buyback: false, dividend: true, fcfMargin: true });
+  assert.strictEqual(r.good, 8);
+});
+
+test('Filtro: reglas editables', () => {
+  const r = C.evaluateFilter('services', { bookToBill: 1.2 }, { 1: { op: '>=', th: 1 } });
+  assert.strictEqual(r.rows[1].pass, true);
+});
+
+test('Múltiplo máximo por EPS CAGR', () => {
+  assert.deepStrictEqual(C.maxMultiples(25), { per: 40, evEbitda: 25 });
+  assert.deepStrictEqual(C.maxMultiples(12), { per: 35, evEbitda: 18 });
+  assert.deepStrictEqual(C.maxMultiples(0), { per: null, evEbitda: null });
+});
+
+test('EGM lineal = B10 + C10 + 0,1*((E10-F10)/F10)', () => {
+  const e = C.egm({ epsGrowth: 12, buyback: 2, dividend: 1, perHist: 25, per: 20, years: 10, mode: 'linear' });
+  close(e.total, 0.12 + 0.03 + 0.1 * (5 / 20));
+});
+
+test('EGM con margen de seguridad 30 %', () => {
+  const e = C.egm({ epsGrowth: 10, safety: 30, buyback: 0, dividend: 0, perHist: 20, per: 20 });
+  close(e.total, 0.07);
+});
+
+test('EPS analistas: precio = PER hist × EPS', () => {
+  const r = C.epsAnalyst({ eps: [5, 6, 7, 8, 10], per: 20, price: 100, baseYear: 2026 });
+  close(r.rows[4].target, 200);
+  close(r.totalReturn, 1);
+  close(r.simpleAvg, 0.2);              // lo que mostraba el Excel (F8/5)
+  close(r.cagr, Math.pow(2, 1 / 5) - 1); // CAGR real
+});
+
+test('EPS crecimiento: K5 = K4*J4 + K4', () => {
+  const r = C.epsGrowth({ baseEps: 4, cagr: 10, per: 20, price: 80, baseYear: 2026, years: 5 });
+  close(r.rows[1].eps, 4.4);
+  close(r.rows[4].eps, 4 * Math.pow(1.1, 4));
+});
+
+test('P/S: ventas crecen por año, precio = ventas × P/S / acciones', () => {
+  const r = C.metricMultiple({ base: 1000, growth: [10, 10, 10, 10, 10], multiple: 3, shares: 100, price: 25, baseYear: 2026 });
+  close(r.rows[0].value, 1100);
+  close(r.rows[0].target, 33);
+});
+
+test('Graham: g = (PER-8,5)/2 y precio justo = EPS × (8,5 + 2g)', () => {
+  const g = C.graham({ price: 100, epsNtm: 5, eps: 4, gExpected: 10, aaa: 4.4 });
+  close(g.perNtm, 20);
+  close(g.gImplied, 5.75);
+  close(g.perFair, 28.5);
+  close(g.fair, 114);
+  close(g.fairRevised, 114);
+});
+
+test('Método del curso: proyección y precios', () => {
+  const hist = v => Array(7).fill(v);
+  const c = { revenue: hist(1000), da: hist(50), ebit: hist(200), interest: hist(10), taxes: hist(38),
+    minority: hist(0), shares: hist(100), capex: hist(40), leases: hist(5), cash: hist(300),
+    debt: hist(200), leaseDebt: hist(20), goodwill: hist(100), equity: hist(800), netDebtProj: [-100] };
+  const k = C.course(c, { price: 20, growth: 10, ebitMargin: 20, taxRate: 20, buyback: 1,
+    multiples: { per: 15, pfcf: 15, evEbitda: 10, evEbit: 12 }, dividendYield: 2 });
+  close(k.rev[7], 1100);
+  close(k.ebit[7], 220);
+  close(k.interest[7], 11);
+  close(k.taxes[7], (220 - 11) * 0.2);
+  close(k.shares[7], 99);
+  // FCF = EBITDA - capex - intereses - impuestos - minoritarios - leases
+  close(k.fcf[6], 250 - 40 - 10 - 38 - 0 - 5);
+  // ROIC = EBIT / (equity + deuda - caja + leases - goodwill)
+  close(k.roic[6], 200 / (800 + 200 - 300 + 20 - 100));
+  // Deuda neta histórica = deuda - caja + leases
+  close(k.netDebt[6], -80);
+  // Caja neta (-100) en 2027: PER suma la caja
+  close(k.methods.per.prices[7], (k.ni[7] * 15 + 100) / 99);
+  // EV/EBITDA resta la deuda neta
+  close(k.methods.evEbitda.prices[7], (k.ebitda[7] * 10 + 100) / 99);
+  // Años sin estimar mantienen la última deuda neta
+  close(k.netDebt[8], -100);
+  // CAGR 3 años + dividend yield
+  close(k.methods.per.cagr3, Math.pow(k.methods.per.prices[9] / 20, 1 / 3) - 1 + 0.02);
+});
+
+console.log(`\n${passed} pruebas correctas`);
