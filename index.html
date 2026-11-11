@@ -28,10 +28,15 @@
       <div class="btn-row">
         <button type="button" class="btn" id="btnNew">Nueva</button>
         <button type="button" class="btn" id="btnDuplicate">Duplicar</button>
-        <button type="button" class="btn" id="btnData">Exportar / Importar</button>
+        <label class="btn file-btn" title="Carga una planilla de valoración .xlsx">Importar Excel<input type="file" id="xlsxInput" accept=".xlsx,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></label>
+        <button type="button" class="btn" id="btnData">Respaldo</button>
         <button type="button" class="btn danger" id="btnDelete">Eliminar</button>
       </div>
     </div>
+  </div>
+  <div class="notice-bar" id="noticeBar" hidden>
+    <span id="noticeText" role="status"></span>
+    <button type="button" class="btn" id="noticeClose">Cerrar</button>
   </div>
   <div class="confirm-bar" id="confirmBar" hidden>
     <span id="confirmText"></span>
@@ -79,7 +84,7 @@
 
 <dialog id="dataDialog" class="dialog">
   <form method="dialog" class="dialog-body" id="dataForm">
-    <h2>Exportar / Importar</h2>
+    <h2>Respaldo</h2>
     <p class="muted">Tus empresas se guardan solo en este navegador. Copia este texto (o descarga el archivo) para tener un respaldo o pasarlo a otro equipo. Para importar, pega un respaldo o elige un archivo .json.</p>
     <textarea id="dataText" rows="10" spellcheck="false" aria-label="Datos en JSON"></textarea>
     <div class="btn-row">
@@ -95,6 +100,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 <script src="js/calc.js"></script>
+<script src="js/importer.js"></script>
+<script src="js/seeds.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

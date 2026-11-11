@@ -7,7 +7,7 @@
   // ======================================================================
   // Almacenamiento (solo en este navegador)
   // ======================================================================
-  var KEYS = { companies: 'pv.companies.v1', current: 'pv.current.v1', rules: 'pv.rules.v1' };
+  var KEYS = { companies: 'pv.companies.v1', current: 'pv.current.v1', rules: 'pv.rules.v1', seeds: 'pv.seeds.v1' };
   function lsGet(key, fallback) {
     try { var v = window.localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
     catch (e) { return fallback; }
@@ -25,11 +25,11 @@
 
   function blankCompany() {
     var course = { assumptions: { growth: null, ebitMargin: null, taxRate: null, buyback: null },
-      netDebtProj: nulls(5), multiples: { per: null, pfcf: null, evEbitda: null, evEbit: null },
+      netDebtProj: nulls(5), sharesProj: nulls(5), multiples: { per: null, pfcf: null, evEbitda: null, evEbit: null },
       dividendYield: null };
     SERIES_KEYS.forEach(function (k) { course[k] = nulls(7); });
     return {
-      id: uid(), ticker: '', name: '', price: null, shares: null, sector: 'general',
+      id: uid(), ticker: '', name: '', notes: '', excluded: [], price: null, shares: null, sector: 'general',
       baseYear: new Date().getFullYear(),
       ratios: {},
       egm: { epsGrowth: null, safety: 0, mode: 'linear', years: 10, hurdle: 15 },
@@ -100,6 +100,17 @@
     var d = demoCompany();
     state.companies = {}; state.companies[d.id] = d; state.currentId = d.id;
   }
+  // Empresas precargadas (js/seeds.js): se agregan una sola vez; si se eliminan no vuelven.
+  var seedsSeen = lsGet(KEYS.seeds, []);
+  (window.SEED_COMPANIES || []).forEach(function (seed) {
+    if (seedsSeen.indexOf(seed.id) >= 0) return;
+    seedsSeen.push(seed.id);
+    if (!state.companies[seed.id]) {
+      state.companies[seed.id] = JSON.parse(JSON.stringify(seed));
+      state.currentId = seed.id;
+    }
+  });
+  lsSet(KEYS.seeds, seedsSeen);
   Object.keys(state.companies).forEach(function (id) { normalize(state.companies[id]); });
   if (!state.companies[state.currentId]) state.currentId = Object.keys(state.companies)[0];
 
@@ -181,6 +192,11 @@
     'course.multiples.pfcf': function (c) { return [c.ratios.pfcfHist, 'Filtro · P/FCF histórico']; },
     'course.multiples.evEbitda': function (c) { return [c.ratios.evEbitda, 'Filtro · EV/EBITDA']; },
     'course.dividendYield': function (c) { return [c.ratios.dividend, 'Filtro · Dividendo']; },
+    'course.sharesProj.*': function (c, R, path) {
+      var i = Number(path.split('.').pop());
+      var v = R && R.course ? R.course.sharesAuto[7 + i] : null;
+      return [v === null || v === undefined ? null : round(v, 1), 'Año anterior − recompras'];
+    },
     'course.netDebtProj.*': function (c, R, path) {
       var i = Number(path.split('.').pop());
       var v = R && R.course ? R.course.netDebt[6 + i] : null;
@@ -457,7 +473,14 @@
   views.resumen = {
     render: function () {
       var c = co(), by = Number(c.baseYear);
-      if (!state.horizon || state.horizon < by || state.horizon > by + 4) state.horizon = by + 4;
+      if (!state.horizon || state.horizon < by || state.horizon > by + 4) {
+        // año por defecto: el último con más métodos con precio objetivo
+        var list = methodList(computeAll(c)), excl = c.excluded || [], best = -1;
+        for (var y = by; y <= by + 4; y++) {
+          var n = list.filter(function (m) { return excl.indexOf(m.key) < 0 && ok(m.byYear[y]) && m.byYear[y] > 0; }).length;
+          if (n >= best) { best = n; state.horizon = y; }
+        }
+      }
       var years = [0, 1, 2, 3, 4].map(function (i) { return [by + i, String(by + i)]; });
       return '<div class="view">' +
         '<div class="view-head"><h2>Resumen de valoración</h2>' +
@@ -468,9 +491,12 @@
         '<div class="chart-box tall"><canvas id="chFootball" aria-label="Precio objetivo por método"></canvas></div></div>' +
         '<div class="grid-2">' +
         '<div class="panel"><h3>Detalle por método</h3><div class="table-wrap"><table id="sumTable"></table></div>' +
-        '<p class="hint">CAGR: en las pestañas EPS, P/S y FCF el año base cuenta como el año 1 (igual que tu Excel). En el método del curso el año base es el punto de partida. Graham no tiene año: es un valor justo de hoy.</p></div>' +
+        '<p class="hint">Desmarca un método para sacarlo del gráfico y de la mediana (por ejemplo, si no aplica a esta empresa). CAGR: en las pestañas EPS, P/S y FCF el año base cuenta como el año 1 (igual que tu Excel). En el método del curso el año base es el punto de partida. Graham no tiene año: es un valor justo de hoy.</p></div>' +
         '<div class="panel"><h3>Trayectoria del precio objetivo</h3><div class="chart-box"><canvas id="chPaths"></canvas></div></div>' +
-        '</div></div>';
+        '</div>' +
+        '<div class="panel"><div class="panel-head"><h3>Notas de la tesis</h3><p>Se guardan con la empresa</p></div>' +
+        '<textarea id="i-notes" data-path="notes" rows="4" class="notes-box" placeholder="Por qué entra (o no) al portafolio, riesgos, catalizadores, fecha de los datos…">' + esc(c.notes || '') + '</textarea></div>' +
+        '</div>';
     },
     update: function (R) {
       var c = co(), Y = state.horizon, price = R.price;
@@ -478,14 +504,16 @@
       var rows = list.map(function (m) {
         var t = m.byYear[Y];
         var years = Y - R.baseYear + m.offset;
-        return { name: m.name, tab: m.tab, target: ok(t) && t > 0 ? t : null,
+        return { key: m.key, name: m.name, tab: m.tab, target: ok(t) && t > 0 ? t : null,
           upside: C.upside(t, price), cagr: years > 0 ? C.cagr(t, price, years) : null };
       });
       var g = R.graham;
-      rows.push({ name: 'Graham (valor justo)', tab: 'graham', target: ok(g.fair) && g.fair > 0 ? g.fair : null, upside: g.upside, cagr: null });
-      if (ok(g.fairRevised)) rows.push({ name: 'Graham revisado (bono AAA)', tab: 'graham', target: g.fairRevised, upside: g.upsideRevised, cagr: null });
+      rows.push({ key: 'graham', name: 'Graham (valor justo)', tab: 'graham', target: ok(g.fair) && g.fair > 0 ? g.fair : null, upside: g.upside, cagr: null });
+      if (ok(g.fairRevised)) rows.push({ key: 'grahamRev', name: 'Graham revisado (bono AAA)', tab: 'graham', target: g.fairRevised, upside: g.upsideRevised, cagr: null });
 
-      var valid = rows.filter(function (r) { return r.target !== null; });
+      var excluded = c.excluded || [];
+      rows.forEach(function (r) { r.off = excluded.indexOf(r.key) >= 0; });
+      var valid = rows.filter(function (r) { return r.target !== null && !r.off; });
       var med = median(valid.map(function (r) { return r.target; }));
       var medUp = C.upside(med, price);
       var above = valid.filter(function (r) { return r.target > price; }).length;
@@ -506,7 +534,8 @@
 
       setText('sumTable', '<thead><tr><th>Método</th><th>Objetivo</th><th>Potencial</th><th>CAGR</th></tr></thead><tbody>' +
         rows.map(function (r) {
-          return '<tr><td><a href="#' + r.tab + '">' + esc(r.name) + '</a></td><td>' + money(r.target) + '</td><td class="' + signCls(r.upside) + '">' +
+          return '<tr class="' + (r.off ? 'off' : '') + '"><td><span class="method-cell"><input type="checkbox" data-method="' + r.key + '"' + (r.off ? '' : ' checked') +
+            ' aria-label="Incluir ' + esc(r.name) + ' en el resumen"><a href="#' + r.tab + '">' + esc(r.name) + '</a></span></td><td>' + money(r.target) + '</td><td class="' + signCls(r.upside) + '">' +
             pctf(r.upside, true) + '</td><td class="' + signCls(r.cagr) + '">' + pctf(r.cagr, true) + '</td></tr>';
         }).join('') + '</tbody>');
 
@@ -528,7 +557,7 @@
 
       var pal = palette();
       var years = [0, 1, 2, 3, 4, 5].map(function (i) { return R.baseYear + i; });
-      var ds = list.map(function (m, i) {
+      var ds = list.filter(function (m) { return excluded.indexOf(m.key) < 0; }).map(function (m, i) {
         return { label: m.name, data: years.map(function (y) { var v = m.byYear[y]; return ok(v) && v > 0 ? v : null; }),
           borderColor: pal[i % pal.length], backgroundColor: pal[i % pal.length], borderWidth: 2,
           borderDash: m.tab === 'curso' ? [6, 3] : [], pointRadius: 2.5, spanGaps: true, tension: 0.25 };
@@ -802,6 +831,7 @@
           ? '<div class="callout good"><b>El mercado descuenta menos crecimiento del que esperas.</b><span>El precio implica ' + NF1.format(g.gImplied) + '% anual y tú esperas ' + NF1.format(g.gExpected) + '%. Margen de ' + NF1.format(g.gGap) + ' puntos.</span></div>'
           : '<div class="callout bad"><b>El mercado ya descuenta más crecimiento del que esperas.</b><span>El precio implica ' + NF1.format(g.gImplied) + '% anual y tú esperas ' + NF1.format(g.gExpected) + '%.</span></div>';
       } else msg = '<div class="callout"><span>Completa el EPS NTM (o el PER NTM) y el g esperado para comparar.</span></div>';
+      if (ok(g.gExpected) && g.gExpected > 20) msg += '<div class="callout bad"><b>g esperado muy alto para Graham.</b><span>Con ' + NF1.format(g.gExpected) + '% la fórmula da valores muy optimistas. Graham recomendaba no pasar de 15–20; prueba con un g más conservador.</span></div>';
       setText('grCallout', msg);
 
       var curve = C.grahamCurve(val(co(), 'graham.eps'), co().graham.aaa, 30);
@@ -849,7 +879,7 @@
       { label: 'Beneficio neto', calc: 'ni', fmt: mill, total: true },
       { label: 'Margen neto', calc: 'netMargin', fmt: pctf, sub: true },
       { label: 'EPS', calc: 'eps', fmt: n2, total: true },
-      { label: 'Acciones diluidas (M)', input: 'shares', calc: 'shares', fmt: mill }
+      { label: 'Acciones diluidas (M)', input: 'shares', projInput: 'sharesProj', calc: 'shares', fmt: mill }
     ],
     cf: [
       { label: 'EBITDA', calc: 'ebitda', fmt: mill },
@@ -1047,6 +1077,7 @@
   }
   function switchTo(id) {
     state.currentId = id;
+    state.horizon = null;
     fillBasics(); fillSelect(); renderView(); scheduleSave();
   }
 
@@ -1062,7 +1093,7 @@
   // Entradas con data-path (vista y datos básicos)
   document.addEventListener('input', function (ev) {
     var el = ev.target;
-    if (el.matches('input[data-path]')) {
+    if (el.matches('input[data-path], textarea[data-path]')) {
       var path = el.getAttribute('data-path');
       var v = readInput(el);
       if (path === 'baseYear') { if (v === null) return; v = Math.round(v); }
@@ -1081,6 +1112,13 @@
   });
   document.addEventListener('change', function (ev) {
     var el = ev.target;
+    if (el.matches('input[data-method]')) {
+      var c = co(), key = el.getAttribute('data-method');
+      c.excluded = (c.excluded || []).filter(function (k) { return k !== key; });
+      if (!el.checked) c.excluded.push(key);
+      update(); scheduleSave();
+      return;
+    }
     if (el.matches('#f-baseYear')) renderView();
     if (el.matches('select[data-rule]')) { update(); scheduleSave(); }
   });
@@ -1185,6 +1223,47 @@
     r.onload = function () { dataText.value = r.result; importText(r.result); };
     r.readAsText(f);
     e.target.value = '';
+  });
+
+  // Importar desde Excel (.xlsx) — SheetJS se carga solo cuando hace falta
+  var XLSX_URL = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+  function loadXlsx() {
+    return new Promise(function (resolve, reject) {
+      if (window.XLSX) return resolve(window.XLSX);
+      var s = document.createElement('script');
+      s.src = XLSX_URL;
+      s.onload = function () { window.XLSX ? resolve(window.XLSX) : reject(new Error('sin XLSX')); };
+      s.onerror = function () { reject(new Error('No se pudo cargar el lector de Excel. Revisa tu conexión.')); };
+      document.head.appendChild(s);
+    });
+  }
+  var noticeBar = document.getElementById('noticeBar');
+  function notice(html, kind) {
+    document.getElementById('noticeText').innerHTML = html;
+    noticeBar.className = 'notice-bar' + (kind ? ' ' + kind : '');
+    noticeBar.hidden = false;
+  }
+  document.getElementById('noticeClose').addEventListener('click', function () { noticeBar.hidden = true; });
+  document.getElementById('xlsxInput').addEventListener('change', function (e) {
+    var f = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!f) return;
+    notice('Leyendo ' + esc(f.name) + '…');
+    loadXlsx().then(function (XLSX) {
+      return f.arrayBuffer().then(function (buf) {
+        var wb = XLSX.read(buf, { type: 'array', cellFormula: true });
+        var res = window.Importer.importWorkbook(wb, XLSX, blankCompany(), f.name);
+        var c = normalize(res.company);
+        if (!c.name) c.name = f.name.replace(/\.xlsx?$/i, '');
+        c.notes = 'Importado de ' + f.name + '.';
+        state.companies[c.id] = c;
+        switchTo(c.id);
+        persist();
+        notice('<b>Importado ' + esc(f.name) + '.</b> ' + res.log.map(esc).join(' · ') + '. Revisa los datos en cada pestaña.', 'good');
+      });
+    }).catch(function (err) {
+      notice('No se pudo importar ' + esc(f.name) + ': ' + esc(err.message || err) + '. Comprueba que sea la planilla de valoración en formato .xlsx.', 'bad');
+    });
   });
 
   // Tema: redibujar gráficos al cambiar claro/oscuro

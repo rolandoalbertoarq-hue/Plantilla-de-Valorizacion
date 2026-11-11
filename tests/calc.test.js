@@ -97,4 +97,29 @@ test('Método del curso: proyección y precios', () => {
   close(k.methods.per.cagr3, Math.pow(k.methods.per.prices[9] / 20, 1 / 3) - 1 + 0.02);
 });
 
+test('GOOGL precargado reproduce los precios de su Excel (4. Valoración)', () => {
+  const vm = require('vm');
+  const sandbox = { window: {} };
+  vm.runInNewContext(require('fs').readFileSync(__dirname + '/../js/seeds.js', 'utf8'), sandbox);
+  const co = sandbox.window.SEED_COMPANIES.find(c => c.ticker === 'GOOGL');
+  const a = co.course.assumptions;
+  const k = C.course(co.course, { price: co.price, growth: a.growth, ebitMargin: a.ebitMargin, taxRate: a.taxRate,
+    buyback: co.ratios.buyback, multiples: co.course.multiples, dividendYield: co.course.dividendYield });
+  // Valores guardados en 2025-06-23_GOOGL_PDV.xlsx, filas 21–24 (2025–2030) y CAGR a 3 y 5 años
+  const excel = {
+    per: [183.8, 216.5, 250.4, 289.8, 335.5, 391.7], pfcf: [111.5, 133, 153.6, 177.5, 205.3, 239.5],
+    evEbitda: [135.5, 155.8, 180.1, 208.2, 240.9, 281.1], evEbit: [167.8, 192.9, 223.1, 258.1, 298.7, 348.7]
+  };
+  Object.keys(excel).forEach(m => excel[m].forEach((v, i) => close(k.methods[m].prices[6 + i], v, 0.06)));
+  close(k.methods.per.cagr3, 0.2116, 1e-4);
+  close(k.methods.per.cagr5, 0.1938, 1e-4);
+  close(k.methods.evEbit.cagr5, 0.1664, 1e-4);
+  const ps = C.metricMultiple({ base: co.ps.revenue, growth: co.ps.growth, multiple: co.ps.multiple, shares: co.shares, price: co.price, baseYear: co.baseYear });
+  [182.45, 209.82, 241.29, 277.49].forEach((v, i) => close(ps.rows[i].target, v, 0.01));
+  const ea = C.epsAnalyst({ eps: co.eps.analyst, per: co.eps.per, price: co.price, baseYear: co.baseYear });
+  [220.8, 234.6, 265.88, 311.42].forEach((v, i) => close(ea.rows[i].target, v, 0.01));
+  assert.strictEqual(ea.rows[4].target, null);
+  close(ea.totalReturn, 311.42 / 165 - 1, 1e-3); // último año con estimación
+});
+
 console.log(`\n${passed} pruebas correctas`);

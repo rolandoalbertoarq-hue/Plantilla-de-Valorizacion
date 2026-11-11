@@ -78,7 +78,7 @@ a { color: var(--accent); }
   position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
   background: var(--surface); border-bottom: 1px solid var(--line);
 }
-.topbar-inner, .confirm-bar {
+.topbar-inner, .confirm-bar, .notice-bar {
   max-width: 1240px; margin: 0 auto;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
@@ -99,6 +99,18 @@ a { color: var(--accent); }
 .brand-name { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; line-height: 1.2; }
 .brand-sub { font-size: .76rem; color: var(--muted); }
 .company-bar { display: flex; gap: 10px; align-items: end; flex-wrap: wrap; }
+.notice-bar {
+  display: flex; gap: 10px; align-items: center; justify-content: space-between; padding-block: 8px;
+  border-top: 1px solid var(--line); background: var(--accent-soft); font-size: .86rem;
+}
+.notice-bar.good { background: var(--good-soft); }
+.notice-bar.bad { background: var(--bad-soft); }
+.method-cell { display: inline-flex; gap: 8px; align-items: center; }
+.method-cell input { width: auto; accent-color: var(--accent); }
+tr.off td { opacity: .45; }
+tr.off td:first-child { opacity: 1; }
+tr.off td:first-child a { color: var(--muted); }
+.notes-box { font-family: var(--font-body); font-size: .9rem; line-height: 1.5; }
 .confirm-bar {
   display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding-block: 8px;
   border-top: 1px solid var(--line); background: var(--bad-soft);

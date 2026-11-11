@@ -168,8 +168,10 @@
 
   // ---------- PROYECCIONES POR MÚLTIPLOS ----------
   function finishProjection(rows, price) {
-    var last = rows[rows.length - 1];
+    // último año con precio objetivo (puede haber años sin estimación al final)
     var n = rows.length;
+    while (n > 0 && rows[n - 1].target === null) n--;
+    var last = n ? rows[n - 1] : null;
     var total = last ? upside(last.target, price) : null;
     return {
       rows: rows,
@@ -285,12 +287,20 @@
         cash = series(c.cash), debt = series(c.debt), leaseDebt = series(c.leaseDebt),
         goodwill = series(c.goodwill), equity = series(c.equity);
 
+    // Años históricos sin datos (columnas vacías del Excel): se muestran en blanco
+    var empty = [];
+    for (var h = 0; h < HIST; h++) empty[h] = rev[h] === 0 && ebit[h] === 0 && shares[h] === 0;
+
     var growAll = [da, interest, minority, capex, leases, cash, debt, leaseDebt, goodwill, equity];
+    var sharesAuto = shares.slice();
     for (var i = HIST; i < COLS; i++) {
       rev[i] = rev[i - 1] * (1 + g);
       growAll.forEach(function (s) { s[i] = s[i - 1] * (1 + g); });
       ebit[i] = rev[i] * margin;
-      shares[i] = shares[i - 1] * (1 - bb);
+      // acciones: escritas a mano o reducidas por la tasa de recompra
+      sharesAuto[i] = shares[i - 1] * (1 - bb);
+      var manual = num(c.sharesProj && c.sharesProj[i - HIST]);
+      shares[i] = manual === null ? sharesAuto[i] : manual;
     }
 
     var ebitda = [], pretax = [], niCons = [], ni = [], eps = [], fcf = [], fcfps = [],
@@ -365,7 +375,7 @@
       mm.upside = mm.prices.map(function (p) { return upside(p, price); });
     });
 
-    return {
+    var out = {
       rev: rev, revGrowth: revGrowth, ebitda: ebitda, ebitdaMargin: ebitdaMargin, da: da,
       ebit: ebit, ebitMargin: ebitMargin, interest: interest, pretax: pretax, taxes: taxes,
       taxRate: taxRate, niCons: niCons, minority: minority, ni: ni, netMargin: netMargin,
@@ -376,6 +386,14 @@
       netDebt: netDebt, mcap: mcap, ev: ev, ndEbitda: ndEbitda, ndEquity: ndEquity,
       methods: methods, dividendYield: dy
     };
+    Object.keys(out).forEach(function (k) {
+      if (Array.isArray(out[k])) for (var e = 0; e < HIST; e++) if (empty[e]) out[k][e] = null;
+    });
+    // el crecimiento del primer año con datos no tiene base de comparación
+    for (var e2 = 0; e2 < HIST; e2++) if (empty[e2] && !empty[e2 + 1]) out.revGrowth[e2 + 1] = null;
+    out.sharesAuto = sharesAuto;
+    out.empty = empty;
+    return out;
   }
 
   var api = {

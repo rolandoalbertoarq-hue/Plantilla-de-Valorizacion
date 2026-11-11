@@ -9,14 +9,31 @@ No necesita servidor ni instalación: son archivos estáticos (HTML, CSS y JavaS
 - **En tu computadora:** abre `index.html` con el navegador.
 - **En línea (GitHub Pages):** en el repositorio, Settings → Pages → Source: *Deploy from a branch*, elige la rama y la carpeta `/ (root)`. La app quedará en `https://<usuario>.github.io/<repositorio>/`.
 
-Los datos se guardan en el navegador (localStorage). Usa **Exportar / Importar** para respaldar tus empresas o pasarlas a otro equipo.
+Los datos se guardan en el navegador (localStorage). Usa **Respaldo** para copiar o descargar tus empresas en JSON y pasarlas a otro equipo.
+
+## Importar tus Excel
+
+El botón **Importar Excel** lee una planilla de valoración `.xlsx` y crea la empresa en la app. Busca los datos por las etiquetas de cada pestaña, así que funciona con la plantilla actual y con versiones anteriores (por ejemplo, las que solo tienen la tabla de Tecnológicas o 4 años de EPS). Importa:
+
+- Filtro 1: el tipo de empresa (la tabla que tenga datos), ticker y ratios.
+- 1–4 del curso: años históricos, supuestos (crecimiento, margen EBIT, tasa impositiva), acciones y deuda neta proyectadas escritas a mano, múltiplos y dividend yield.
+- EPS Proyectado (analistas y crecimiento propio), Fórmula de Graham, PS y FCF Proyectado.
+
+Los métodos que el Excel no usaba quedan desmarcados en el Resumen. Siempre revisa los datos después de importar.
+
+## Empresas precargadas
+
+- **DEMO**: ejemplo con datos ficticios (solo aparece si no tienes empresas guardadas).
+- **GOOGL**: importada de `2025-06-23_GOOGL_PDV.xlsx`, con precio y datos a junio de 2025. Reproduce los mismos precios objetivo que ese Excel (hay una prueba que lo comprueba).
+
+Las empresas precargadas se agregan una sola vez por navegador; si las eliminas, no vuelven. Están en `js/seeds.js`.
 
 ## Flujo de valoración
 
 | Pestaña | Viene del Excel | Qué hace |
 |---|---|---|
 | **Datos básicos** (arriba, siempre visibles) | Filtro 1 | Ticker, precio actual, n° de acciones (millones) y año base. |
-| **Resumen** | — (nuevo) | Precio objetivo de todos los métodos para el año elegido, frente al precio actual. Mediana, potencial y CAGR. |
+| **Resumen** | — (nuevo) | Precio objetivo de todos los métodos para el año elegido, frente al precio actual. Mediana, potencial y CAGR. Puedes desmarcar métodos que no apliquen y escribir notas de la tesis. |
 | **1 · Filtro** | Filtro 1 | Plantillas General, REITs, Tecnológicas, Servicios y Financieras. Calificación Good/Not, reglas editables y múltiplo máximo según crecimiento. |
 | **2 · Earnings Growth** | F2-EGM, inst-EGM | Modelo de Compound Quality: EPS growth + shareholder yield ± cambio de valoración. Margen de seguridad, regla del 72 y retorno mínimo exigido. |
 | **3 · EPS · P/S · FCF** | EPS Proyectado, PS Proyectado, FCF Proyectado | Las tres proyecciones por múltiplo en una sola pestaña, con gráfico comparativo. |
@@ -47,6 +64,8 @@ index.html        Página y navegación
 css/styles.css    Estilos (claro y oscuro)
 js/calc.js        Motor de cálculo (funciones puras)
 js/app.js         Interfaz, gráficos (Chart.js) y guardado
+js/importer.js    Lectura de planillas .xlsx (SheetJS)
+js/seeds.js       Empresas precargadas (GOOGL)
 tests/            Pruebas del motor de cálculo
 ```
 
