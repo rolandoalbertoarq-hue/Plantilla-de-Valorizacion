@@ -406,10 +406,19 @@
         ctx.stroke();
         ctx.setLineDash([]);
         if (l.label) {
-          ctx.fillStyle = l.color;
           ctx.font = '500 11px "IBM Plex Mono", ui-monospace, monospace';
-          if (l.axis === 'x') { ctx.textAlign = px > a.right - 90 ? 'right' : 'left'; ctx.fillText(l.label, px + (ctx.textAlign === 'right' ? -5 : 5), a.top + 11); }
-          else { ctx.textAlign = 'left'; ctx.fillText(l.label, a.left + 6, px - 5); }
+          var w = ctx.measureText(l.label).width, tx, ty;
+          if (l.axis === 'x') {
+            var right = px + w + 10 > a.right;
+            tx = right ? px - 5 - w : px + 5;
+            ty = l.labelAt === 'bottom' ? a.bottom - 6 : a.top + 11;
+          } else { tx = a.left + 6; ty = px - 5; }
+          // fondo para que la etiqueta se lea sobre las barras
+          ctx.fillStyle = alpha(tok('--surface'), 0.85);
+          ctx.fillRect(tx - 3, ty - 10, w + 6, 14);
+          ctx.fillStyle = l.color;
+          ctx.textAlign = 'left';
+          ctx.fillText(l.label, tx, ty);
         }
         ctx.restore();
       });
@@ -484,7 +493,7 @@
       var years = [0, 1, 2, 3, 4].map(function (i) { return [by + i, String(by + i)]; });
       return '<div class="view">' +
         '<div class="view-head"><h2>Resumen de valoración</h2>' +
-        '<p>Todos los métodos en un mismo lugar. Cada barra es el precio objetivo que da un método para el año elegido; la línea punteada es el precio actual.</p></div>' +
+        '<p>Todos los métodos en un mismo lugar. Cada barra es el precio objetivo que da un método para el año elegido. La línea naranja es el precio actual y la azul, el promedio de los precios objetivo.</p></div>' +
         '<div class="kpis" id="sumKpis"></div>' +
         '<div class="panel"><div class="panel-head"><h3>Precio objetivo por método</h3>' +
         '<div class="btn-row"><span class="label">Año</span>' + seg('_horizon', years, state.horizon) + '</div></div>' +
@@ -515,6 +524,7 @@
       rows.forEach(function (r) { r.off = excluded.indexOf(r.key) >= 0; });
       var valid = rows.filter(function (r) { return r.target !== null && !r.off; });
       var med = median(valid.map(function (r) { return r.target; }));
+      var avg = valid.length ? valid.reduce(function (sum, r) { return sum + r.target; }, 0) / valid.length : null;
       var medUp = C.upside(med, price);
       var above = valid.filter(function (r) { return r.target > price; }).length;
 
@@ -551,7 +561,8 @@
         options: baseOptions({ indexAxis: 'y', interaction: { mode: 'nearest', axis: 'y', intersect: false },
           plugins: { legend: { display: false },
             tooltip: { callbacks: { label: function (ctx) { return money(ctx.raw) + '  (' + pctf(C.upside(ctx.raw, price), true) + ')'; } } },
-            refLine: { lines: [{ axis: 'x', value: price, color: priceC, label: 'Precio ' + money(price) }] } },
+            refLine: { lines: [{ axis: 'x', value: price, color: priceC, label: 'Precio ' + money(price) },
+              { axis: 'x', value: avg, color: tok('--accent'), label: 'Promedio ' + money(avg) + ' (' + pctf(C.upside(avg, price), true) + ')', dash: [2, 3], labelAt: 'bottom' }] } },
           scales: { x: { beginAtZero: true, suggestedMax: maxV * 1.08, ticks: { callback: moneyTick } }, y: { grid: { display: false } } } })
       });
 
