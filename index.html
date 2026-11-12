@@ -29,6 +29,7 @@
         <button type="button" class="btn" id="btnNew">Nueva</button>
         <button type="button" class="btn" id="btnDuplicate">Duplicar</button>
         <label class="btn file-btn" title="Carga una planilla de valoración .xlsx">Importar Excel<input type="file" id="xlsxInput" accept=".xlsx,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></label>
+        <button type="button" class="btn" id="btnTikr">Pegar de TIKR</button>
         <button type="button" class="btn" id="btnData">Respaldo</button>
         <button type="button" class="btn danger" id="btnDelete">Eliminar</button>
       </div>
@@ -82,6 +83,25 @@
   <div id="view"></div>
 </main>
 
+<dialog id="tikrDialog" class="dialog">
+  <form method="dialog" class="dialog-body" id="tikrForm">
+    <h2>Pegar de TIKR</h2>
+    <p class="muted">En TIKR abre Financials, selecciona la tabla completa (desde el título hasta la última fila) y cópiala. Pega aquí el <b>Income Statement</b>, el <b>Balance Sheet</b> y el <b>Cash Flow</b>, uno debajo del otro. También puedes usar <b>Importar Excel</b> con un archivo donde pegaste esas tablas.</p>
+    <textarea id="tikrText" rows="10" spellcheck="false" aria-label="Tablas copiadas de TIKR" placeholder="Income Statement | TIKR.com&#9;1/26/25&#9;1/25/26&#9;LTM&#10;Total Revenues&#9;130,497.00&#9;215,938.00&#9;302,970.00&#10;…"></textarea>
+    <div class="tikr-target">
+      <span class="label">Cargar en</span>
+      <label><input type="radio" name="tikrTarget" value="new" checked> Empresa nueva</label>
+      <label><input type="radio" name="tikrTarget" value="current"> <span id="tikrCurrentName">Empresa actual</span></label>
+      <label class="field compact"><span>Ticker (empresa nueva)</span><input type="text" id="tikrTicker" autocomplete="off" spellcheck="false"></label>
+    </div>
+    <p class="muted" id="tikrPreview" role="status"></p>
+    <div class="btn-row">
+      <button type="button" class="btn primary" id="btnTikrApply">Cargar datos</button>
+      <button type="submit" class="btn">Cerrar</button>
+    </div>
+  </form>
+</dialog>
+
 <dialog id="dataDialog" class="dialog">
   <form method="dialog" class="dialog-body" id="dataForm">
     <h2>Respaldo</h2>
@@ -101,6 +121,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 <script src="js/calc.js"></script>
 <script src="js/importer.js"></script>
+<script src="js/tikr.js"></script>
 <script src="js/seeds.js"></script>
 <script src="js/app.js"></script>
 </body>

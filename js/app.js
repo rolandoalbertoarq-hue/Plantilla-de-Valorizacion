@@ -188,9 +188,11 @@
       var r = C.div(num(c.course.taxes[6]), pre);
       return [r === null ? null : round(r * 100, 2), 'Tasa impositiva ' + c.baseYear];
     },
-    'course.multiples.per': function (c) { return [c.ratios.perHist, 'Filtro · PER histórico']; },
-    'course.multiples.pfcf': function (c) { return [c.ratios.pfcfHist, 'Filtro · P/FCF histórico']; },
-    'course.multiples.evEbitda': function (c) { return [c.ratios.evEbitda, 'Filtro · EV/EBITDA']; },
+    // Múltiplos: el del Filtro; si está vacío, el múltiplo actual calculado con los datos del año base
+    'course.multiples.per': function (c, R) { return multLink(c, R, 'perHist', 'per', 'Filtro · PER histórico'); },
+    'course.multiples.pfcf': function (c, R) { return multLink(c, R, 'pfcfHist', 'pfcf', 'Filtro · P/FCF histórico'); },
+    'course.multiples.evEbitda': function (c, R) { return multLink(c, R, 'evEbitda', 'evEbitda', 'Filtro · EV/EBITDA'); },
+    'course.multiples.evEbit': function (c, R) { return multLink(c, R, null, 'evEbit', ''); },
     'course.dividendYield': function (c) { return [c.ratios.dividend, 'Filtro · Dividendo']; },
     'course.sharesProj.*': function (c, R, path) {
       var i = Number(path.split('.').pop());
@@ -203,6 +205,11 @@
       return [v === null || v === undefined ? null : Math.round(v), 'Año anterior'];
     }
   };
+  function multLink(c, R, ratioKey, curKey, label) {
+    if (ratioKey && num(c.ratios[ratioKey]) !== null) return [c.ratios[ratioKey], label];
+    var v = R && R.currentMult ? R.currentMult[curKey] : null;
+    return [ok(v) ? round(v, 1) : null, 'Múltiplo actual ' + c.baseYear];
+  }
   function linkFor(path) {
     if (LINKS[path]) return LINKS[path];
     var wild = path.replace(/\.\d+$/, '.*');
@@ -234,11 +241,13 @@
       ebitMargin: val(c, 'course.assumptions.ebitMargin'),
       taxRate: val(c, 'course.assumptions.taxRate'),
       buyback: val(c, 'course.assumptions.buyback'),
-      multiples: {
-        per: val(c, 'course.multiples.per'), pfcf: val(c, 'course.multiples.pfcf'),
-        evEbitda: val(c, 'course.multiples.evEbitda'), evEbit: val(c, 'course.multiples.evEbit')
-      },
       dividendYield: val(c, 'course.dividendYield')
+    };
+    // múltiplos actuales (no dependen de los múltiplos elegidos) para los vínculos por defecto
+    R.currentMult = C.course(c.course, Object.assign({}, ctx, { multiples: {} })).current;
+    ctx.multiples = {
+      per: val(c, 'course.multiples.per', R), pfcf: val(c, 'course.multiples.pfcf', R),
+      evEbitda: val(c, 'course.multiples.evEbitda', R), evEbit: val(c, 'course.multiples.evEbit', R)
     };
     R.courseCtx = ctx;
     R.course = C.course(c.course, ctx);
@@ -972,7 +981,8 @@
         field('Múltiplo P/FCF', 'course.multiples.pfcf', { unit: 'x' }) +
         field('Múltiplo EV/EBITDA', 'course.multiples.evEbitda', { unit: 'x' }) +
         field('Múltiplo EV/EBIT', 'course.multiples.evEbit', { unit: 'x' }) +
-        field('Dividend yield', 'course.dividendYield', { unit: '%' }) + '</div>';
+        field('Dividend yield', 'course.dividendYield', { unit: '%' }) + '</div>' +
+        '<p class="hint" id="curMult"></p>';
       if (sub === 'cf' || sub === 'rc') assumptions = '<p class="muted">Las columnas proyectadas crecen al mismo ritmo que las ventas (' +
         '<a href="#curso" data-sub="is">supuesto en Estado de resultados</a>).</p>';
 
@@ -1038,6 +1048,10 @@
           tooltip: { callbacks: { label: function (ctx) { return ctx.dataset.label + ': ' + money(ctx.raw); } } },
           refLine: { lines: [{ axis: 'y', value: R.price, color: tok('--price'), label: 'Precio ' + money(R.price) }] } },
           scales: { y: priceAxis(R.price) } }) });
+        var cm = R.currentMult || {};
+        setText('curMult', 'Múltiplos actuales ' + by + ' (precio de hoy sobre los datos del año base): PER ' + xf(cm.per) +
+          ' · P/FCF ' + xf(cm.pfcf) + ' · EV/EBITDA ' + xf(cm.evEbitda) + ' · EV/EBIT ' + xf(cm.evEbit) +
+          '. Si un múltiplo queda vacío y no está en el Filtro, se usa el actual.');
         setText('valKpis', ms.map(function (k) {
           var m = K.methods[k];
           return kpi('CAGR 3 años · ' + m.label, '<span class="' + signCls(m.cagr3) + '">' + pctf(m.cagr3, true) + '</span>',
@@ -1262,7 +1276,14 @@
     notice('Leyendo ' + esc(f.name) + '…');
     loadXlsx().then(function (XLSX) {
       return f.arrayBuffer().then(function (buf) {
-        var wb = XLSX.read(buf, { type: 'array', cellFormula: true });
+        var wb = XLSX.read(buf, { type: 'array', cellFormula: true, cellDates: true });
+        // ¿Tablas copiadas de TIKR? → se abren en "Pegar de TIKR" para elegir dónde cargarlas
+        var tikrText = tikrFromWorkbook(wb, XLSX);
+        if (tikrText) {
+          noticeBar.hidden = true;
+          openTikr(tikrText, f.name);
+          return;
+        }
         var res = window.Importer.importWorkbook(wb, XLSX, blankCompany(), f.name);
         var c = normalize(res.company);
         if (!c.name) c.name = f.name.replace(/\.xlsx?$/i, '');
@@ -1275,6 +1296,83 @@
     }).catch(function (err) {
       notice('No se pudo importar ' + esc(f.name) + ': ' + esc(err.message || err) + '. Comprueba que sea la planilla de valoración en formato .xlsx.', 'bad');
     });
+  });
+
+  // ---------------- Pegar de TIKR ----------------
+  var TIKR_FIELDS = ['revenue', 'da', 'ebit', 'interest', 'taxes', 'minority', 'shares', 'capex', 'leases',
+    'cash', 'debt', 'leaseDebt', 'goodwill', 'equity'];
+  function tikrFromWorkbook(wb, XLSX) {
+    var parts = [];
+    wb.SheetNames.forEach(function (n) {
+      var grid = XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: null });
+      if (window.Tikr.parseGrid(grid).length) {
+        parts.push(grid.map(function (row) {
+          return row.map(function (v) {
+            if (v instanceof Date) return (v.getMonth() + 1) + '/' + v.getDate() + '/' + v.getFullYear();
+            return v == null ? '' : String(v);
+          }).join('\t');
+        }).join('\n'));
+      }
+    });
+    return parts.join('\n');
+  }
+  var tikrDlg = document.getElementById('tikrDialog');
+  var tikrText = document.getElementById('tikrText');
+  var tikrPreview = document.getElementById('tikrPreview');
+  function tikrParse() {
+    var tables = window.Tikr.parseText(tikrText.value);
+    return { tables: tables, res: window.Tikr.toCourse(tables) };
+  }
+  function tikrRefresh() {
+    if (!tikrText.value.trim()) { tikrPreview.textContent = ''; return; }
+    var p = tikrParse();
+    if (!p.tables.length) { tikrPreview.textContent = 'No se reconoció ninguna tabla. Copia también la fila del título (la de las fechas y LTM).'; return; }
+    var ys = Object.keys(p.res.years);
+    var miss = p.res.missing.map(function (m) { return window.Tikr.FIELD_LABELS[m] || m; });
+    tikrPreview.innerHTML = 'Reconocido: <b>' + esc(p.res.log.join(', ')) + '</b> · años ' + esc(ys.join(', ')) +
+      (ys.length ? ' (LTM = ' + p.res.baseYear + ')' : '') +
+      (miss.length ? '<br>Falta: ' + esc(miss.join(', ')) + '.' : '') +
+      (p.res.daFromEbitda ? '<br>D&amp;A calculada como EBITDA − EBIT; el Cash Flow la reemplaza.' : '');
+  }
+  function openTikr(text, fileName) {
+    tikrText.value = text || '';
+    document.getElementById('tikrCurrentName').textContent = 'Empresa actual (' + companyLabel(co()) + ')';
+    var m = fileName && /_([A-Z][A-Z0-9.]{0,6})_/.exec(fileName);
+    document.getElementById('tikrTicker').value = m ? m[1] : '';
+    tikrRefresh();
+    if (tikrDlg.showModal) tikrDlg.showModal(); else tikrDlg.setAttribute('open', '');
+  }
+  document.getElementById('btnTikr').addEventListener('click', function () { openTikr(''); });
+  tikrText.addEventListener('input', tikrRefresh);
+  document.getElementById('btnTikrApply').addEventListener('click', function () {
+    var p = tikrParse();
+    if (!p.tables.length || !p.res.baseYear) { tikrRefresh(); return; }
+    var target = document.querySelector('input[name="tikrTarget"]:checked').value;
+    var c;
+    if (target === 'new') {
+      c = blankCompany();
+      var t = document.getElementById('tikrTicker').value.trim().toUpperCase();
+      c.ticker = t; c.name = t ? t + ' (datos de TIKR)' : 'Datos de TIKR';
+      state.companies[c.id] = c;
+    } else {
+      c = co();
+      // se reemplazan los históricos del curso por los de TIKR
+      TIKR_FIELDS.forEach(function (f) { c.course[f] = [null, null, null, null, null, null, null]; });
+    }
+    var n = window.Tikr.applyToCompany(c, p.res);
+    if (!num(c.shares) && c.course.shares[6]) c.shares = c.course.shares[6];
+    if (p.res.missing.indexOf('capex') >= 0) {
+      c.excluded = (c.excluded || []).filter(function (k) { return k !== 'cPfcf'; }).concat(['cPfcf']);
+    }
+    tikrDlg.close ? tikrDlg.close() : tikrDlg.removeAttribute('open');
+    state.courseSub = 'is';
+    switchTo(c.id);
+    if (location.hash !== '#curso') location.hash = '#curso';
+    var miss = p.res.missing.map(function (m) { return window.Tikr.FIELD_LABELS[m] || m; });
+    notice('<b>Datos de TIKR cargados</b> en el método del curso: ' + n + ' valores, año base ' + p.res.baseYear + ' (LTM). ' +
+      (miss.length ? 'Falta: ' + esc(miss.join(', ')) + '. ' : '') +
+      'Revisa los supuestos de proyección y los múltiplos.' + (c.price ? '' : ' Escribe el precio actual arriba.'), miss.length ? '' : 'good');
+    persist();
   });
 
   // Tema: redibujar gráficos al cambiar claro/oscuro

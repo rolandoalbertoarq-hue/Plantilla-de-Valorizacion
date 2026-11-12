@@ -391,6 +391,14 @@
     });
     // el crecimiento del primer año con datos no tiene base de comparación
     for (var e2 = 0; e2 < HIST; e2++) if (empty[e2] && !empty[e2 + 1]) out.revGrowth[e2 + 1] = null;
+    // Múltiplos actuales del año base (precio de hoy sobre los datos del año base)
+    var b = HIST - 1;
+    out.current = {
+      per: ni[b] > 0 ? div(mcap[b], ni[b]) : null,
+      pfcf: fcf[b] > 0 ? div(mcap[b], fcf[b]) : null,
+      evEbitda: ebitda[b] > 0 ? div(ev[b], ebitda[b]) : null,
+      evEbit: ebit[b] > 0 ? div(ev[b], ebit[b]) : null
+    };
     out.sharesAuto = sharesAuto;
     out.empty = empty;
     return out;

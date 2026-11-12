@@ -235,5 +235,223 @@ window.SEED_COMPANIES = [
       "graham",
       "grahamRev"
     ]
+  },
+  {
+    "id": "seed-nvda",
+    "ticker": "NVDA",
+    "name": "NVIDIA Corp.",
+    "notes": "Datos de TIKR (Libro1.xlsx). Precio $173,73 y 24.147 M de acciones al cierre del 11-nov-2026. Años: 2024 = año fiscal FY2025 (cerró ene-2025), 2025 = FY2026 (cerró ene-2026), 2026 = LTM (últimos 12 meses). FALTA el Cash Flow (la Hoja3 era una copia del Balance): sin capex el FCF sale inflado, por eso \"Curso · P/FCF\" está desmarcado en el Resumen. La D&A se calculó como EBITDA − EBIT. Intereses = gasto − ingresos financieros (neto es ingreso). Los impuestos incluyen los de la ganancia extraordinaria por inversiones (30.552 M LTM), que no entra al EBIT; por eso la proyección usa la tasa efectiva de TIKR (16 %). SUPUESTOS DE PRUEBA, cámbialos: crecimiento 25 % anual (el consenso a 2 años de TIKR es 79 %, demasiado para 5 años), margen EBIT = el LTM, recompras 0,8 % anual (la caída de acciones de los últimos 2 años) y múltiplos = los actuales hasta que pongas los históricos en el Filtro.",
+    "excluded": [
+      "cPfcf"
+    ],
+    "price": 173.73,
+    "shares": 24147,
+    "sector": "tech",
+    "baseYear": 2026,
+    "ratios": {},
+    "egm": {
+      "epsGrowth": null,
+      "safety": 0,
+      "mode": "linear",
+      "years": 10,
+      "hurdle": 15
+    },
+    "eps": {
+      "analyst": [
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "per": null,
+      "baseEps": null,
+      "cagr": null
+    },
+    "ps": {
+      "revenue": null,
+      "growth": [
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "multiple": null
+    },
+    "fcf": {
+      "base": null,
+      "growth": [
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "multipleMode": "hist",
+      "multiple": null
+    },
+    "graham": {
+      "epsNtm": null,
+      "perNtmOverride": null,
+      "eps": null,
+      "gExpected": null,
+      "aaa": null
+    },
+    "course": {
+      "assumptions": {
+        "growth": 25,
+        "ebitMargin": null,
+        "taxRate": 16,
+        "buyback": 0.8
+      },
+      "netDebtProj": [
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "sharesProj": [
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "multiples": {
+        "per": null,
+        "pfcf": null,
+        "evEbitda": null,
+        "evEbit": null
+      },
+      "dividendYield": null,
+      "revenue": [
+        null,
+        null,
+        null,
+        null,
+        130497,
+        215938,
+        302970
+      ],
+      "da": [
+        null,
+        null,
+        null,
+        null,
+        1864,
+        2843,
+        3687
+      ],
+      "ebit": [
+        null,
+        null,
+        null,
+        null,
+        81453,
+        130387,
+        197579
+      ],
+      "interest": [
+        null,
+        null,
+        null,
+        null,
+        -1539,
+        -2041,
+        -1765
+      ],
+      "taxes": [
+        null,
+        null,
+        null,
+        null,
+        11146,
+        21383,
+        36863
+      ],
+      "minority": [
+        null,
+        null,
+        null,
+        null,
+        0,
+        0,
+        0
+      ],
+      "shares": [
+        null,
+        null,
+        null,
+        null,
+        24804,
+        24514,
+        24397.5
+      ],
+      "capex": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "leases": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "cash": [
+        null,
+        null,
+        null,
+        null,
+        43210,
+        62556,
+        62469
+      ],
+      "debt": [
+        null,
+        null,
+        null,
+        null,
+        8463,
+        8468,
+        33366
+      ],
+      "leaseDebt": [
+        null,
+        null,
+        null,
+        null,
+        1519,
+        2944,
+        5494
+      ],
+      "goodwill": [
+        null,
+        null,
+        null,
+        null,
+        5188,
+        20832,
+        21125
+      ],
+      "equity": [
+        null,
+        null,
+        null,
+        null,
+        79327,
+        157293,
+        228984
+      ]
+    }
   }
 ];

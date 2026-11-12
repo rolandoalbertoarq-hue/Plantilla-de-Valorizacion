@@ -122,4 +122,51 @@ test('GOOGL precargado reproduce los precios de su Excel (4. Valoración)', () =
   close(ea.totalReturn, 311.42 / 165 - 1, 1e-3); // último año con estimación
 });
 
+test('TIKR: lee tablas copiadas y las convierte al método del curso', () => {
+  const T = require('../js/tikr.js');
+  close(T.parseNum('(32,639.00)'), -32639);
+  close(T.parseNum('USD 142.62'), 142.62);
+  assert.strictEqual(T.parseNum('NM'), null);
+  const tsv = [
+    'Income Statement | TIKR.com\t1/26/25\t1/25/26\tLTM',
+    'Total Revenues\t130,497.00\t215,938.00\t302,970.00',
+    '   % Change YoY\t1.142\t0.655\t',
+    'Operating Income\t81,453.00\t130,387.00\t197,579.00',
+    'Interest Expense\t-247\t-259\t-464',
+    'Interest And Investment Income\t1,786.00\t2,300.00\t2,229.00',
+    'Other Non Operating Income (Expenses)\t4\t104\t-153',
+    'Income Tax Expense\t(11,146.00)\t(21,383.00)\t(36,863.00)',
+    'Net Income to Company\t72,880.00\t120,067.00\t192,880.00',
+    'Net Income\t72,880.00\t120,067.00\t192,880.00',
+    'Weighted Average Diluted Shares Outstanding\t24,804.00\t24,514.00\t24,397.50',
+    'EBITDA\t83,317.00\t133,230.00\t201,266.00',
+    'Balance Sheet | TIKR.com\t1/26/25\t1/25/26\tLTM',
+    'Total Cash And Short Term Investments\t43,210.00\t62,556.00\t62,469.00',
+    'Goodwill\t5,188.00\t20,832.00\t21,125.00',
+    'Current Portion of Long-Term Debt\t\t999\t1,000.00',
+    'Current Portion of Capital Lease Obligations\t\t372\t509',
+    'Long-Term Debt\t8,463.00\t7,469.00\t32,366.00',
+    'Capital Leases\t1,519.00\t2,572.00\t4,985.00',
+    'Total Common Equity\t79,327.00\t157,293.00\t228,984.00',
+    'Cash Flow | TIKR.com\t1/26/25\t1/25/26\tLTM',
+    'Depreciation & Amort., Total\t1,900.00\t2,900.00\t3,700.00',
+    'Capital Expenditure\t(3,236.00)\t(6,042.00)\t(7,000.00)'
+  ].join('\n');
+  const tables = T.parseText(tsv, { currentYear: 2026 });
+  assert.deepStrictEqual(tables.map(t => t.type), ['income', 'balance', 'cashflow']);
+  const r = T.toCourse(tables);
+  assert.strictEqual(r.baseYear, 2026);                 // LTM = año en curso
+  assert.deepStrictEqual(Object.keys(r.years), ['2024', '2025', '2026']); // cierres de enero = año anterior
+  const y = r.years[2026];
+  close(y.interest, -1765);                             // gasto 464 − ingresos 2.229
+  close(y.taxes, 36863);
+  close(y.minority, 0);
+  close(y.debt, 33366);
+  close(y.leaseDebt, 5494);
+  close(y.debt - y.cash + y.leaseDebt, -23609);         // deuda neta igual que TIKR
+  close(y.da, 3700);                                    // el Cash Flow reemplaza EBITDA − EBIT
+  close(y.capex, 7000);
+  assert.deepStrictEqual(r.missing, []);
+});
+
 console.log(`\n${passed} pruebas correctas`);
