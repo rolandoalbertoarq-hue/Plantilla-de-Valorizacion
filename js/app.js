@@ -110,6 +110,8 @@
         function copy(p) { setPath(stored, p, JSON.parse(JSON.stringify(getPath(seed, p) === undefined ? null : getPath(seed, p)))); }
         (u.paths || []).forEach(copy);
         (u.pathsIfEmpty || []).forEach(function (p) { if (getPath(stored, p) == null) copy(p); });
+        // pathsIfEquals: {ruta: valor anterior} → se actualiza solo si el usuario no lo cambió
+        Object.keys(u.pathsIfEquals || {}).forEach(function (p) { if (getPath(stored, p) === u.pathsIfEquals[p]) copy(p); });
         if (u.removeExcluded) stored.excluded = (stored.excluded || []).filter(function (k) { return u.removeExcluded.indexOf(k) < 0; });
         if (u.notesPrefix && (stored.notes || '').indexOf(u.notesPrefix) === 0) stored.notes = seed.notes;
       });
@@ -1388,10 +1390,9 @@
       TIKR_FIELDS.forEach(function (f) { c.course[f] = [null, null, null, null, null, null, null]; });
     }
     var n = window.Tikr.applyToCompany(c, p.res);
-    // P/S y FCF parten del LTM: ventas (vínculo al Modelo financiero) y FCF de TIKR (misma definición que su P/FCF)
-    var ltm = p.res.years[p.res.baseYear] || {};
-    c.ps.revenue = null; c.ps.baseDataYear = null; c.fcf.baseDataYear = null;
-    if (ltm.fcfTikr !== undefined) c.fcf.base = ltm.fcfTikr;
+    // P/S y FCF parten del LTM: vinculados a las ventas y al FCF del Modelo financiero en el año base
+    c.ps.revenue = null; c.ps.baseDataYear = null;
+    c.fcf.base = null; c.fcf.baseDataYear = null;
     if (!num(c.shares) && c.course.shares[6]) c.shares = c.course.shares[6];
     if (p.res.missing.indexOf('capex') >= 0) {
       c.excluded = (c.excluded || []).filter(function (k) { return k !== 'cPfcf'; }).concat(['cPfcf']);

@@ -5,7 +5,7 @@
 - **Pegar de TIKR**: copia el Income Statement, el Balance Sheet y el Cash Flow desde TIKR (o un Excel donde los pegaste) y la app llena los años históricos del Modelo financiero. El LTM queda como año base; los cierres fiscales de enero a mayo cuentan para el año calendario anterior (NVDA: FY2026, que cerró en ene-2026, va en 2025).
 - **Múltiplos actuales**: en Valoración del Modelo financiero se muestran el PER, P/FCF, EV/EBITDA y EV/EBIT de hoy con los datos del año base. Si no hay múltiplo histórico en el Filtro, se usa el actual.
 - **NVDA precargada** con los datos de TIKR del 11-nov-2026 (Income Statement, Balance Sheet y Cash Flow).
-- **P/S y FCF parten del LTM**: el dato base es el del año base (LTM al cargar TIKR) y la proyección empieza el año siguiente. Al cargar TIKR, el FCF base es el "Free Cash Flow" de TIKR (Cash from Operations − Capital Expenditure), la misma definición que su P/FCF. Cada pestaña tiene un campo "Año del dato base" por si el dato es de otro año.
+- **P/S y FCF parten del LTM**: el dato base es el del año base (LTM al cargar TIKR) y la proyección empieza el año siguiente. Las ventas y el FCF base vienen del Modelo financiero. Cada pestaña tiene un campo "Año del dato base" por si el dato es de otro año.
 - **"Método del curso" pasa a llamarse "Modelo financiero"** (pestaña 5). Los enlaces antiguos con `#curso` siguen funcionando.
 - Las empresas precargadas pueden actualizarse sin borrar lo que el usuario ya llenó (`seedVersion` / `seedUpdate`).
 

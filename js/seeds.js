@@ -2,7 +2,8 @@
  * Empresas que vienen cargadas en la app. Se agregan una sola vez por navegador;
  * si las eliminas no vuelven a aparecer.
  * seedVersion + seedUpdates: si el navegador ya tenía una versión anterior de la empresa, se aplican
- * solo las actualizaciones posteriores (paths: se reemplazan; pathsIfEmpty: solo si el usuario no las llenó).
+ * solo las actualizaciones posteriores (paths: se reemplazan; pathsIfEmpty: solo si el usuario no las llenó;
+ * pathsIfEquals: solo si siguen con el valor anterior).
  */
 window.SEED_COMPANIES = [
   {
@@ -292,7 +293,7 @@ window.SEED_COMPANIES = [
       "baseDataYear": null
     },
     "fcf": {
-      "base": 127006,
+      "base": null,
       "growth": [
         null,
         null,
@@ -466,7 +467,7 @@ window.SEED_COMPANIES = [
         228984
       ]
     },
-    "seedVersion": 3,
+    "seedVersion": 4,
     "seedUpdates": [
       {
         "paths": [
@@ -481,10 +482,10 @@ window.SEED_COMPANIES = [
         "version": 2
       },
       {
-        "version": 3,
-        "pathsIfEmpty": [
-          "fcf.base"
-        ]
+        "version": 4,
+        "pathsIfEquals": {
+          "fcf.base": 127006
+        }
       }
     ]
   }

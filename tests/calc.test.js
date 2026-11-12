@@ -150,8 +150,7 @@ test('TIKR: lee tablas copiadas y las convierte al método del curso', () => {
     'Total Common Equity\t79,327.00\t157,293.00\t228,984.00',
     'Cash Flow | TIKR.com\t1/26/25\t1/25/26\tLTM',
     'Depreciation & Amort., Total\t1,900.00\t2,900.00\t3,700.00',
-    'Capital Expenditure\t(3,236.00)\t(6,042.00)\t(7,000.00)',
-    'Free Cash Flow\t60,853.00\t96,676.00\t127,006.00'
+    'Capital Expenditure\t(3,236.00)\t(6,042.00)\t(7,000.00)'
   ].join('\n');
   const tables = T.parseText(tsv, { currentYear: 2026 });
   assert.deepStrictEqual(tables.map(t => t.type), ['income', 'balance', 'cashflow']);
@@ -167,7 +166,6 @@ test('TIKR: lee tablas copiadas y las convierte al método del curso', () => {
   close(y.debt - y.cash + y.leaseDebt, -23609);         // deuda neta igual que TIKR
   close(y.da, 3700);                                    // el Cash Flow reemplaza EBITDA − EBIT
   close(y.capex, 7000);
-  close(y.fcfTikr, 127006);                             // FCF de TIKR para la pestaña FCF proyectado
   assert.deepStrictEqual(r.missing, []);
 });
 
