@@ -1,6 +1,8 @@
 /*
  * Empresas que vienen cargadas en la app. Se agregan una sola vez por navegador;
  * si las eliminas no vuelven a aparecer.
+ * seedVersion + seedUpdate: si el navegador ya tenía una versión anterior de la empresa,
+ * solo se reemplazan esas rutas (lo demás que el usuario haya llenado se respeta).
  */
 window.SEED_COMPANIES = [
   {
@@ -240,10 +242,8 @@ window.SEED_COMPANIES = [
     "id": "seed-nvda",
     "ticker": "NVDA",
     "name": "NVIDIA Corp.",
-    "notes": "Datos de TIKR (Libro1.xlsx). Precio $173,73 y 24.147 M de acciones al cierre del 11-nov-2026. Años: 2024 = año fiscal FY2025 (cerró ene-2025), 2025 = FY2026 (cerró ene-2026), 2026 = LTM (últimos 12 meses). FALTA el Cash Flow (la Hoja3 era una copia del Balance): sin capex el FCF sale inflado, por eso \"Curso · P/FCF\" está desmarcado en el Resumen. La D&A se calculó como EBITDA − EBIT. Intereses = gasto − ingresos financieros (neto es ingreso). Los impuestos incluyen los de la ganancia extraordinaria por inversiones (30.552 M LTM), que no entra al EBIT; por eso la proyección usa la tasa efectiva de TIKR (16 %). SUPUESTOS DE PRUEBA, cámbialos: crecimiento 25 % anual (el consenso a 2 años de TIKR es 79 %, demasiado para 5 años), margen EBIT = el LTM, recompras 0,8 % anual (la caída de acciones de los últimos 2 años) y múltiplos = los actuales hasta que pongas los históricos en el Filtro.",
-    "excluded": [
-      "cPfcf"
-    ],
+    "notes": "Datos de TIKR (Libro1.xlsx: Income Statement, Balance Sheet y Cash Flow). Precio $173,73 y 24.147 M de acciones al cierre del 11-nov-2026. Años: 2024 = año fiscal FY2025 (cerró ene-2025), 2025 = FY2026 (cerró ene-2026), 2026 = LTM (últimos 12 meses). Capex = Capital Expenditure + Purchase of Intangible Assets, como indica el curso. Ojo: FY2026 y el LTM incluyen una compra de intangibles de 13.000 M que parece puntual; sin ella el capex LTM sería 7.354 M. La proyección hace crecer el capex desde 20.354 M. Intereses = gasto − ingresos financieros (neto es ingreso). Los impuestos incluyen los de la ganancia extraordinaria por inversiones (30.552 M LTM), que no entra al EBIT; por eso la proyección usa la tasa efectiva de TIKR (16 %). SUPUESTOS DE PRUEBA, cámbialos: crecimiento 25 % anual (el consenso a 2 años de TIKR es 79 %, demasiado para 5 años), margen EBIT = el LTM, recompras 0,8 % anual (la caída de acciones de los últimos 2 años) y múltiplos = los actuales hasta que pongas los históricos en el Filtro.",
+    "excluded": [],
     "price": 173.73,
     "shares": 24147,
     "sector": "tech",
@@ -394,9 +394,9 @@ window.SEED_COMPANIES = [
         null,
         null,
         null,
-        null,
-        null,
-        null
+        3236,
+        19042,
+        20354
       ],
       "leases": [
         null,
@@ -452,6 +452,18 @@ window.SEED_COMPANIES = [
         157293,
         228984
       ]
+    },
+    "seedVersion": 2,
+    "seedUpdate": {
+      "paths": [
+        "course.capex",
+        "course.da",
+        "course.leases"
+      ],
+      "removeExcluded": [
+        "cPfcf"
+      ],
+      "notesPrefix": "Datos de TIKR (Libro1.xlsx). Precio"
     }
   }
 ];

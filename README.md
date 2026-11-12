@@ -51,7 +51,7 @@ Con esto la deuda neta coincide con la "Net Debt" de TIKR. El LTM queda como añ
 ## Empresas precargadas
 
 - **DEMO**: ejemplo con datos ficticios (solo aparece si no tienes empresas guardadas).
-- **NVDA**: datos de TIKR al 11-nov-2026 para probar el método del curso. Falta el Cash Flow (capex) y los supuestos de proyección son de prueba; están explicados en las notas de la empresa.
+- **NVDA**: datos de TIKR al 11-nov-2026 (los tres estados) para probar el método del curso. Los supuestos de proyección son de prueba; están explicados en las notas de la empresa.
 - **GOOGL**: importada de `2025-06-23_GOOGL_PDV.xlsx`, con precio y datos a junio de 2025. Reproduce los mismos precios objetivo que ese Excel (hay una prueba que lo comprueba).
 
 Las empresas precargadas se agregan una sola vez por navegador; si las eliminas, no vuelven. Están en `js/seeds.js`.

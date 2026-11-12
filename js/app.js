@@ -103,6 +103,14 @@
   // Empresas precargadas (js/seeds.js): se agregan una sola vez; si se eliminan no vuelven.
   var seedsSeen = lsGet(KEYS.seeds, []);
   (window.SEED_COMPANIES || []).forEach(function (seed) {
+    var stored = state.companies && state.companies[seed.id];
+    if (stored && (stored.seedVersion || 1) < (seed.seedVersion || 1) && seed.seedUpdate) {
+      var u = seed.seedUpdate;
+      (u.paths || []).forEach(function (p) { setPath(stored, p, JSON.parse(JSON.stringify(getPath(seed, p)))); });
+      if (u.removeExcluded) stored.excluded = (stored.excluded || []).filter(function (k) { return u.removeExcluded.indexOf(k) < 0; });
+      if (u.notesPrefix && (stored.notes || '').indexOf(u.notesPrefix) === 0) stored.notes = seed.notes;
+      stored.seedVersion = seed.seedVersion;
+    }
     if (seedsSeen.indexOf(seed.id) >= 0) return;
     seedsSeen.push(seed.id);
     if (!state.companies[seed.id]) {
