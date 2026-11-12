@@ -1,6 +1,6 @@
 # Historial de versiones
 
-## Versión 2
+## Versión 2 — commit `710ea7b`
 
 - **Portafolio**: casilla "En mi portafolio" en los datos básicos y nueva pestaña Portafolio con el rendimiento anualizado esperado a 5 años de cada empresa y el promedio con el mismo peso para todas. La lista de empresas se agrupa en "En portafolio" y "Fuera del portafolio".
 
@@ -20,4 +20,4 @@
 - GOOGL precargada desde `2025-06-23_GOOGL_PDV.xlsx`.
 - Línea de precio objetivo promedio en el gráfico por método.
 
-Para volver a la versión 1: `git checkout 098a82b`, o crea una Release en GitHub sobre ese commit.
+Para volver a una versión: `git checkout 098a82b` (v1) o `git checkout 710ea7b` (v2), o crea una Release en GitHub sobre ese commit.
