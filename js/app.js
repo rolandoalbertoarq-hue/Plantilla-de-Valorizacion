@@ -107,6 +107,7 @@
     companies: lsGet(KEYS.companies, null),
     currentId: lsGet(KEYS.current, null),
     rules: lsGet(KEYS.rules, {}),
+    deletedIds: lsGet('pv.deleted.v1', []),
     tab: 'resumen',
     courseSub: 'is',
     horizon: null
@@ -129,29 +130,32 @@
   }
   // Empresas precargadas (js/seeds.js): se agregan una sola vez; si se eliminan no vuelven.
   var seedsSeen = lsGet(KEYS.seeds, []);
-  (window.SEED_COMPANIES || []).forEach(function (seed) {
-    var stored = state.companies && state.companies[seed.id];
-    if (stored && (stored.seedVersion || 1) < (seed.seedVersion || 1)) {
-      (seed.seedUpdates || []).forEach(function (u) {
-        if (u.version <= (stored.seedVersion || 1)) return;
-        function copy(p) { setPath(stored, p, JSON.parse(JSON.stringify(getPath(seed, p) === undefined ? null : getPath(seed, p)))); }
-        (u.paths || []).forEach(copy);
-        (u.pathsIfEmpty || []).forEach(function (p) { if (getPath(stored, p) == null) copy(p); });
-        // pathsIfEquals: {ruta: valor anterior} → se actualiza solo si el usuario no lo cambió
-        Object.keys(u.pathsIfEquals || {}).forEach(function (p) { if (getPath(stored, p) === u.pathsIfEquals[p]) copy(p); });
-        if (u.removeExcluded) stored.excluded = (stored.excluded || []).filter(function (k) { return u.removeExcluded.indexOf(k) < 0; });
-        if (u.notesPrefix && (stored.notes || '').indexOf(u.notesPrefix) === 0) stored.notes = seed.notes;
-      });
-      stored.seedVersion = seed.seedVersion;
-    }
-    if (seedsSeen.indexOf(seed.id) >= 0) return;
-    seedsSeen.push(seed.id);
-    if (!state.companies[seed.id]) {
-      state.companies[seed.id] = JSON.parse(JSON.stringify(seed));
-      state.currentId = seed.id;
-    }
-  });
-  lsSet(KEYS.seeds, seedsSeen);
+  function applySeeds(selectNew) {
+    (window.SEED_COMPANIES || []).forEach(function (seed) {
+      var stored = state.companies && state.companies[seed.id];
+      if (stored && (stored.seedVersion || 1) < (seed.seedVersion || 1)) {
+        (seed.seedUpdates || []).forEach(function (u) {
+          if (u.version <= (stored.seedVersion || 1)) return;
+          function copy(p) { setPath(stored, p, JSON.parse(JSON.stringify(getPath(seed, p) === undefined ? null : getPath(seed, p)))); }
+          (u.paths || []).forEach(copy);
+          (u.pathsIfEmpty || []).forEach(function (p) { if (getPath(stored, p) == null) copy(p); });
+          // pathsIfEquals: {ruta: valor anterior} → se actualiza solo si el usuario no lo cambió
+          Object.keys(u.pathsIfEquals || {}).forEach(function (p) { if (getPath(stored, p) === u.pathsIfEquals[p]) copy(p); });
+          if (u.removeExcluded) stored.excluded = (stored.excluded || []).filter(function (k) { return u.removeExcluded.indexOf(k) < 0; });
+          if (u.notesPrefix && (stored.notes || '').indexOf(u.notesPrefix) === 0) stored.notes = seed.notes;
+        });
+        stored.seedVersion = seed.seedVersion;
+      }
+      if (seedsSeen.indexOf(seed.id) >= 0) return;
+      seedsSeen.push(seed.id);
+      if (!state.companies[seed.id] && (state.deletedIds || []).indexOf(seed.id) < 0) {
+        state.companies[seed.id] = JSON.parse(JSON.stringify(seed));
+        if (selectNew) state.currentId = seed.id;
+      }
+    });
+    lsSet(KEYS.seeds, seedsSeen);
+  }
+  applySeeds(true);
   Object.keys(state.companies).forEach(function (id) { normalize(state.companies[id]); });
   if (!state.companies[state.currentId]) state.currentId = Object.keys(state.companies)[0];
 
@@ -163,16 +167,183 @@
     saveTimer = setTimeout(persist, 350);
   }
   function persist() {
-    var ok = lsSet(KEYS.companies, state.companies) && lsSet(KEYS.current, state.currentId) &&
-             lsSet(KEYS.rules, state.rules);
-    var el = document.getElementById('saveStatus');
-    if (!el) return;
-    if (ok) {
-      var t = new Date();
-      el.textContent = 'Guardado en este navegador · ' + t.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
-    } else {
-      el.textContent = 'Este navegador no permite guardar. Usa Exportar para no perder datos.';
+    stampModified();
+    var saved = lsSet(KEYS.companies, state.companies) && lsSet(KEYS.current, state.currentId) &&
+             lsSet(KEYS.rules, state.rules) && lsSet('pv.deleted.v1', state.deletedIds || []);
+    if (cloud.ready) { cloudPush(); return; }
+    if (cloud.connecting) return;
+    setStatus(saved ? 'Guardado solo en este navegador · ' + hhmm() : 'Este navegador no permite guardar. Usa Respaldo para no perder datos.');
+  }
+  function hhmm() { return new Date().toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' }); }
+  function setStatus(t) { var el = document.getElementById('saveStatus'); if (el) el.textContent = t; }
+
+  // ======================================================================
+  // Sincronización en la nube (base de datos de la página en claude.ai)
+  // Cada empresa es un documento companies/<id>; settings/main guarda reglas,
+  // empresas precargadas ya vistas y empresas eliminadas. En otros lugares
+  // (archivo local, GitHub Pages) la app sigue guardando solo en el navegador.
+  // ======================================================================
+  var cloud = { db: null, ready: false, connecting: false, synced: {}, settingsJson: null, writing: false, queued: false };
+  var CLOUD_FLAG = 'pv.cloudSynced.v1', LOCAL_BACKUP = 'pv.localBackup.v1';
+  /** JSON con las claves ordenadas, para comparar sin depender del orden. */
+  function stable(v) {
+    if (Array.isArray(v)) return '[' + v.map(stable).join(',') + ']';
+    if (v && typeof v === 'object') {
+      return '{' + Object.keys(v).sort().filter(function (k) { return v[k] !== undefined; })
+        .map(function (k) { return JSON.stringify(k) + ':' + stable(v[k]); }).join(',') + '}';
     }
+    return JSON.stringify(v === undefined ? null : v);
+  }
+  function stableNoMod(c) { var m = c.modifiedAt; delete c.modifiedAt; var j = stable(c); if (m !== undefined) c.modifiedAt = m; return j; }
+  var lastLocal = {};
+  function snapshotLocal() { lastLocal = {}; Object.keys(state.companies).forEach(function (id) { lastLocal[id] = stableNoMod(state.companies[id]); }); }
+  /** Marca con modifiedAt las empresas que cambiaron desde el último guardado (sirve para resolver qué versión es más nueva). */
+  function stampModified() {
+    var now = new Date().toISOString();
+    Object.keys(state.companies).forEach(function (id) {
+      var c = state.companies[id], j = stableNoMod(c);
+      if (lastLocal[id] !== j) { c.modifiedAt = now; lastLocal[id] = j; }
+    });
+    Object.keys(lastLocal).forEach(function (id) { if (!state.companies[id]) delete lastLocal[id]; });
+  }
+  function settingsDoc() { return { rules: state.rules || {}, seedsSeen: seedsSeen, deletedIds: state.deletedIds || [] }; }
+
+  function cloudPush() {
+    if (!cloud.ready) return;
+    if (cloud.writing) { cloud.queued = true; return; }
+    cloud.writing = true;
+    var db = cloud.db;
+    function loop() {
+      cloud.queued = false;
+      var ops = [];
+      Object.keys(state.companies).forEach(function (id) {
+        var j = stable(state.companies[id]);
+        if (cloud.synced[id] !== j) ops.push(function () { return db.doc('companies/' + id).set(JSON.parse(j)).then(function () { cloud.synced[id] = j; }); });
+      });
+      Object.keys(cloud.synced).forEach(function (id) {
+        if (!state.companies[id]) ops.push(function () { return db.doc('companies/' + id).delete().then(function () { delete cloud.synced[id]; }); });
+      });
+      var sj = stable(settingsDoc());
+      if (sj !== cloud.settingsJson) ops.push(function () { return db.doc('settings/main').set(JSON.parse(sj)).then(function () { cloud.settingsJson = sj; }); });
+      // una escritura a la vez
+      return ops.reduce(function (p, op) { return p.then(op); }, Promise.resolve()).then(function () { if (cloud.queued) return loop(); });
+    }
+    loop().then(function () {
+      setStatus('Sincronizado en la nube · ' + hhmm());
+    }).catch(function (e) {
+      var code = e && e.code;
+      setStatus(code === 'quota_exceeded' ? 'La nube está llena: borra empresas que no uses. Los cambios quedan en este navegador.'
+        : 'No se pudo guardar en la nube. Los cambios quedan en este navegador; se reintentará al editar.');
+    }).then(function () { cloud.writing = false; });
+  }
+
+  function cloudStart() {
+    if (!window.claude || typeof window.claude.use !== 'function') return;
+    cloud.connecting = true;
+    setStatus('Conectando con la nube…');
+    window.claude.use('db').then(function (db) {
+      if (!db) { cloud.connecting = false; setStatus('Guardado solo en este navegador'); return; }
+      var timer = setTimeout(function () { setStatus('No se pudo conectar con la nube todavía. Usando los datos de este navegador.'); }, 10000);
+      return Promise.all([db.collection('companies').get(), db.doc('settings/main').get()]).then(function (res) {
+        clearTimeout(timer);
+        cloud.db = db;
+        cloudMerge(res[0], res[1]);
+        cloud.connecting = false;
+        cloud.ready = true;
+        persist(); // sube lo que falte
+        cloudSubscribe();
+      });
+    }).catch(function () {
+      cloud.connecting = false;
+      setStatus('No se pudo conectar con la nube. Los cambios quedan en este navegador.');
+    });
+  }
+
+  function union(a, b) { var out = (a || []).slice(); (b || []).forEach(function (x) { if (out.indexOf(x) < 0) out.push(x); }); return out; }
+
+  /** Une los datos de la nube con los de este navegador. Gana la versión modificada más recientemente. */
+  function cloudMerge(cs, ss) {
+    var remote = {};
+    cs.docs.forEach(function (d) { remote[d.id] = d.data(); });
+    var rset = ss.exists ? ss.data() : null;
+    var firstSync = !lsGet(CLOUD_FLAG, false);
+    Object.keys(remote).forEach(function (id) { cloud.synced[id] = stable(remote[id]); });
+    cloud.settingsJson = rset ? stable(rset) : null;
+    var remoteEmpty = !cs.size && !rset;
+    var conflicts = {}, msg = null;
+    if (remoteEmpty) {
+      msg = 'Tus empresas se guardaron en la nube. Ahora puedes abrir esta página en otro dispositivo y verás los mismos datos.';
+    } else {
+      var deleted = union(rset && rset.deletedIds, state.deletedIds);
+      var local = state.companies, merged = {};
+      var remoteHasDemo = Object.keys(remote).some(function (id) { return remote[id].ticker === 'DEMO'; });
+      union(Object.keys(remote), Object.keys(local)).forEach(function (id) {
+        if (deleted.indexOf(id) >= 0) return;
+        var r = remote[id], l = local[id];
+        if (r && !l) { merged[id] = JSON.parse(JSON.stringify(r)); return; }
+        if (l && !r) {
+          // la empresa de ejemplo de un navegador nuevo no se sube si la nube ya tiene una
+          if (firstSync && remoteHasDemo && l.ticker === 'DEMO' && /ejemplo/i.test(l.name || '')) return;
+          merged[id] = l; return;
+        }
+        if (stable(r) === stable(l)) { merged[id] = JSON.parse(JSON.stringify(r)); return; }
+        var lt = l.modifiedAt || '', rt = r.modifiedAt || '';
+        if (lt > rt) { merged[id] = l; return; }
+        merged[id] = JSON.parse(JSON.stringify(r));
+        if (firstSync) conflicts[id] = l;
+      });
+      state.companies = merged;
+      if (rset && rset.rules) state.rules = rset.rules;
+      seedsSeen = union(rset && rset.seedsSeen, seedsSeen);
+      state.deletedIds = deleted;
+      if (firstSync) msg = 'Conectado a la nube: ahora ves las mismas empresas en todos tus dispositivos.';
+    }
+    Object.keys(state.companies).forEach(function (id) { migrateBuybackSign(state.companies[id]); normalize(state.companies[id]); });
+    applySeeds(false);
+    lsSet(CLOUD_FLAG, true);
+    if (!state.companies[state.currentId]) state.currentId = Object.keys(state.companies)[0];
+    snapshotLocal();
+    var nConf = Object.keys(conflicts).length;
+    if (nConf) {
+      lsSet(LOCAL_BACKUP, conflicts);
+      msg = (msg ? msg + ' ' : '') + 'En este dispositivo había versiones distintas de ' +
+        Object.keys(conflicts).map(function (id) { return esc(tickerOf(conflicts[id])); }).join(', ') +
+        '; se usaron las de la nube. <button type="button" class="btn" id="btnRestoreLocal">Usar las de este dispositivo</button>';
+    }
+    fillBasics(); fillSelect(); renderView();
+    if (msg) notice(msg, nConf ? '' : 'good');
+  }
+
+  function cloudSubscribe() {
+    cloud.db.collection('companies').onSnapshot(function (snap) {
+      var changed = false, current = false;
+      snap.docChanges().forEach(function (ch) {
+        if (ch.doc.metadata.hasPendingWrites) return; // escritura propia aún sin confirmar
+        var id = ch.doc.id;
+        if (ch.type === 'removed') {
+          if (state.companies[id] && cloud.synced[id] !== undefined) {
+            delete state.companies[id]; delete cloud.synced[id]; delete lastLocal[id];
+            changed = true; if (id === state.currentId) current = true;
+          }
+          return;
+        }
+        var data = ch.doc.data(), j = stable(data);
+        if (cloud.synced[id] === j) return;
+        cloud.synced[id] = j;
+        if (state.companies[id] && stable(state.companies[id]) === j) return;
+        state.companies[id] = normalize(JSON.parse(JSON.stringify(data)));
+        lastLocal[id] = stableNoMod(state.companies[id]);
+        changed = true; if (id === state.currentId) current = true;
+      });
+      if (!changed) return;
+      lsSet(KEYS.companies, state.companies);
+      if (!state.companies[state.currentId]) { state.currentId = Object.keys(state.companies)[0]; current = true; }
+      fillSelect();
+      if (current || state.tab === 'portafolio') { fillBasics(); renderView(); }
+      setStatus('Sincronizado en la nube · ' + hhmm());
+    }, function () {
+      setStatus('Se perdió la conexión con la nube. Recarga la página para reconectar.');
+    });
   }
 
   // ======================================================================
@@ -1376,6 +1547,16 @@
       renderView();
       return;
     }
+    if (ev.target.id === 'btnRestoreLocal') {
+      var backup = lsGet(LOCAL_BACKUP, {});
+      Object.keys(backup).forEach(function (id) { state.companies[id] = normalize(backup[id]); });
+      try { localStorage.removeItem(LOCAL_BACKUP); } catch (e) { /* sin almacenamiento */ }
+      snapshotLocal();
+      Object.keys(backup).forEach(function (id) { state.companies[id].modifiedAt = new Date().toISOString(); lastLocal[id] = stableNoMod(state.companies[id]); });
+      persist(); fillBasics(); fillSelect(); renderView();
+      notice('Se restauraron las versiones de este dispositivo y se guardaron en la nube.', 'good');
+      return;
+    }
     var tg = ev.target.closest('[data-toggle-portfolio]');
     if (tg) {
       var tc = state.companies[tg.getAttribute('data-toggle-portfolio')];
@@ -1418,6 +1599,7 @@
   });
   document.getElementById('confirmNo').addEventListener('click', function () { confirmBar.hidden = true; });
   document.getElementById('confirmYes').addEventListener('click', function () {
+    state.deletedIds = union(state.deletedIds, [state.currentId]);
     delete state.companies[state.currentId];
     if (!Object.keys(state.companies).length) { var c = blankCompany(); state.companies[c.id] = c; }
     confirmBar.hidden = true;
@@ -1615,6 +1797,8 @@
 
   fillBasics();
   fillSelect();
+  snapshotLocal();
   onHash();
   persist();
+  cloudStart();
 })();

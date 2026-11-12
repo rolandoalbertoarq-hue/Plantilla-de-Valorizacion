@@ -1,5 +1,9 @@
 # Historial de versiones
 
+## Versión 3 (en desarrollo)
+
+- **Sincronización en la nube**: en la página de claude.ai las empresas se guardan en la base de datos de la página (solo el dueño lee y escribe), y se ven iguales en la computadora y el celular. La primera conexión de cada dispositivo une sus datos con los de la nube sin perder nada: gana la versión más reciente y, si había diferencias, se ofrece restaurar la de ese dispositivo. Las empresas eliminadas no reaparecen desde otro dispositivo.
+
 ## Versión 2 — commit `710ea7b`
 
 - **Dos secciones principales** (ajuste posterior al cierre): Portafolio y Plantillas de valoración, en la barra superior. La barra de empresa, los datos básicos y las pestañas 1–5 solo aparecen en Plantillas.

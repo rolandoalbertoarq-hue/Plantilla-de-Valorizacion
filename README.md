@@ -9,7 +9,12 @@ No necesita servidor ni instalación: son archivos estáticos (HTML, CSS y JavaS
 - **En tu computadora:** abre `index.html` con el navegador.
 - **En línea (GitHub Pages):** en el repositorio, Settings → Pages → Source: *Deploy from a branch*, elige la rama y la carpeta `/ (root)`. La app quedará en `https://<usuario>.github.io/<repositorio>/`.
 
-Los datos se guardan en el navegador (localStorage). Usa **Respaldo** para copiar o descargar tus empresas en JSON y pasarlas a otro equipo.
+**Dónde se guardan los datos:**
+
+- **En la página publicada en claude.ai**, las empresas se guardan en la base de datos de la propia página, así que ves lo mismo en la computadora y en el celular, y los cambios llegan a los otros dispositivos en segundos. Solo el dueño de la página puede leerlas y modificarlas. La primera vez que se abre en un dispositivo, la app une los datos del navegador con los de la nube: gana la versión modificada más recientemente y, si había diferencias, ofrece "Usar las de este dispositivo".
+- **Abierta desde un archivo o GitHub Pages**, guarda solo en el navegador (localStorage).
+
+En los dos casos, **Respaldo** copia o descarga todas tus empresas en JSON.
 
 ## Importar tus Excel
 
