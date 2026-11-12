@@ -130,6 +130,12 @@ tr.off td:first-child a { color: var(--muted); }
 .row-link { cursor: pointer; }
 .row-link:hover td { background: var(--surface-2); }
 .tag-port { font-size: .7rem; }
+.field-head { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+.src-pill { text-transform: none; letter-spacing: 0; font-style: normal; font-size: .68rem; padding: 1px 7px; }
+.src-pill.link { background: var(--accent-soft); color: var(--accent); }
+.src-pill.own { background: color-mix(in srgb, var(--price) 18%, transparent); color: var(--price); }
+.btn:disabled { opacity: .45; cursor: default; }
+.btn:disabled:hover { border-color: var(--line); color: var(--ink); }
 .notes-box { font-family: var(--font-body); font-size: .9rem; line-height: 1.5; }
 .confirm-bar {
   display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding-block: 8px;

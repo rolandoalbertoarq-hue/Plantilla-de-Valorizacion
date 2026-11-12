@@ -561,7 +561,8 @@
   function field(label, path, opts) {
     opts = opts || {};
     var unit = opts.unit ? ' <span class="unit">(' + opts.unit + ')</span>' : '';
-    return '<label class="field"><span>' + label + unit + '</span>' + inp(path, opts) +
+    var badge = opts.badge ? ' <em class="pill na src-pill" data-src-for="' + path + '"></em>' : '';
+    return '<label class="field"><span class="field-head"><span>' + label + unit + '</span>' + badge + '</span>' + inp(path, opts) +
       '<span class="hint" data-hint-for="' + path + '">' + (opts.hint || '') + '</span></label>';
   }
   function seg(path, options, current) {
@@ -591,7 +592,8 @@
       el.title = 'Vacío = usa ' + res[1];
       var hint = document.querySelector('[data-hint-for="' + path + '"]');
       if (hint) {
-        hint.textContent = own === null ? (num(res[0]) === null ? 'Sin dato en ' + res[1] : '↳ ' + res[1]) : 'Valor propio · vacío = ' + res[1];
+        hint.textContent = own === null ? (num(res[0]) === null ? 'Sin dato en ' + res[1] : '↳ ' + res[1])
+          : 'Valor propio · ' + res[1] + (num(res[0]) === null ? ': sin dato' : ': ' + res[0]);
         hint.classList.toggle('link', linked);
       }
     });
@@ -1197,6 +1199,28 @@
       });
     }
   };
+  // Múltiplos de Valoración: la casilla muestra el número que se usa (del Filtro o propio) para poder retocarlo
+  var VAL_LINKED = ['course.multiples.per', 'course.multiples.pfcf', 'course.multiples.evEbitda', 'course.multiples.evEbit', 'course.dividendYield'];
+  function showValSources(R) {
+    var c = co(), anyOwn = false;
+    VAL_LINKED.forEach(function (path) {
+      var el = document.getElementById(idFor(path));
+      var badge = document.querySelector('[data-src-for="' + path + '"]');
+      if (!el) return;
+      var own = num(getPath(c, path));
+      var res = linkFor(path)(c, R, path);
+      if (own === null) {
+        if (document.activeElement !== el) el.value = num(res[0]) === null ? '' : res[0];
+        var src = /^Filtro/.test(res[1]) ? 'Filtro' : /^Múltiplo actual/.test(res[1]) ? 'Actual' : 'Vinculado';
+        if (badge) { badge.textContent = num(res[0]) === null ? 'Sin dato' : src; badge.className = 'pill src-pill ' + (num(res[0]) === null ? 'na' : 'link'); }
+      } else {
+        anyOwn = true;
+        if (badge) { badge.textContent = 'Propio'; badge.className = 'pill src-pill own'; }
+      }
+    });
+    var btn = document.getElementById('btnResetMult');
+    if (btn) btn.disabled = !anyOwn;
+  }
   function guide(sym, text) {
     return '<div class="guide-item"><span class="sym">' + sym + '</span><p>' + text + '</p></div>';
   }
@@ -1299,12 +1323,14 @@
         field('Margen EBIT', 'course.assumptions.ebitMargin', { unit: '%' }) +
         field('Tasa impositiva', 'course.assumptions.taxRate', { unit: '%' }) +
         field('Cambio anual de acciones (− = recompra)', 'course.assumptions.buyback', { unit: '%' }) + '</div>';
-      if (sub === 'val') assumptions = '<div class="form-grid">' +
-        field('Múltiplo PER', 'course.multiples.per', { unit: 'x' }) +
-        field('Múltiplo P/FCF', 'course.multiples.pfcf', { unit: 'x' }) +
-        field('Múltiplo EV/EBITDA', 'course.multiples.evEbitda', { unit: 'x' }) +
-        field('Múltiplo EV/EBIT', 'course.multiples.evEbit', { unit: 'x' }) +
-        field('Dividend yield', 'course.dividendYield', { unit: '%' }) + '</div>' +
+      if (sub === 'val') assumptions = '<div class="panel-head"><p>Escribe tu múltiplo o deja el del Filtro. La etiqueta indica de dónde viene cada uno.</p>' +
+        '<button type="button" class="btn" id="btnResetMult">Restablecer con datos del Filtro</button></div>' +
+        '<div class="form-grid">' +
+        field('PER', 'course.multiples.per', { unit: 'x', badge: true }) +
+        field('P/FCF', 'course.multiples.pfcf', { unit: 'x', badge: true }) +
+        field('EV/EBITDA', 'course.multiples.evEbitda', { unit: 'x', badge: true }) +
+        field('EV/EBIT', 'course.multiples.evEbit', { unit: 'x', badge: true }) +
+        field('Dividend yield', 'course.dividendYield', { unit: '%', badge: true }) + '</div>' +
         '<p class="hint" id="curMult"></p>';
       if (sub === 'cf' || sub === 'rc') assumptions = '<p class="muted">Las columnas proyectadas crecen al mismo ritmo que las ventas (' +
         '<a href="#modelo" data-sub="is">supuesto en Estado de resultados</a>).</p>';
@@ -1371,6 +1397,7 @@
           tooltip: { callbacks: { label: function (ctx) { return ctx.dataset.label + ': ' + money(ctx.raw); } } },
           refLine: { lines: [{ axis: 'y', value: R.price, color: tok('--price'), label: 'Precio ' + money(R.price) }] } },
           scales: { y: priceAxis(R.price) } }) });
+        showValSources(R);
         var cm = R.currentMult || {};
         setText('curMult', 'Múltiplos actuales ' + by + ' (precio de hoy sobre los datos del año base): PER ' + xf(cm.per) +
           ' · P/FCF ' + xf(cm.pfcf) + ' · EV/EBITDA ' + xf(cm.evEbitda) + ' · EV/EBIT ' + xf(cm.evEbit) +
@@ -1519,6 +1546,10 @@
       update(); scheduleSave();
     }
   });
+  document.addEventListener('focusout', function (ev) {
+    var p = ev.target && ev.target.getAttribute && ev.target.getAttribute('data-path');
+    if (p && VAL_LINKED.indexOf(p) >= 0) update();
+  });
   document.addEventListener('change', function (ev) {
     var el = ev.target;
     if (el.matches('input[data-method]')) {
@@ -1569,6 +1600,12 @@
     if (op) { switchTo(op.getAttribute('data-open')); location.hash = '#resumen'; return; }
     var s = ev.target.closest('[data-sub]');
     if (s) { ev.preventDefault(); state.courseSub = s.getAttribute('data-sub'); renderView(); return; }
+    if (ev.target.id === 'btnResetMult') {
+      var cm = co();
+      VAL_LINKED.forEach(function (p) { setPath(cm, p, null); });
+      scheduleSave(); renderView();
+      return;
+    }
     if (ev.target.id === 'btnResetRules') {
       delete state.rules[co().sector]; scheduleSave(); renderView();
     }

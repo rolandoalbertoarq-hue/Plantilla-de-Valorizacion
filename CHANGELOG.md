@@ -2,6 +2,7 @@
 
 ## Versión 3 (en desarrollo)
 
+- **Múltiplos editables en Valoración (Modelo financiero)**: cada casilla muestra el múltiplo que se usa, del Filtro o propio, y se puede retocar directamente. Una etiqueta indica el origen (Filtro, Actual o Propio) y el botón "Restablecer con datos del Filtro" vuelve a vincular los múltiplos y el dividend yield.
 - **Sincronización en la nube**: en la página de claude.ai las empresas se guardan en la base de datos de la página (solo el dueño lee y escribe), y se ven iguales en la computadora y el celular. La primera conexión de cada dispositivo une sus datos con los de la nube sin perder nada: gana la versión más reciente y, si había diferencias, se ofrece restaurar la de ese dispositivo. Las empresas eliminadas no reaparecen desde otro dispositivo.
 
 ## Versión 2 — commit `710ea7b`
