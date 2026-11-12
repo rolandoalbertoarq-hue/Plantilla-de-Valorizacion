@@ -34,8 +34,8 @@
       ratios: {},
       egm: { epsGrowth: null, safety: 0, mode: 'linear', years: 10, hurdle: 15 },
       eps: { analyst: nulls(5), per: null, baseEps: null, cagr: null },
-      ps: { revenue: null, growth: nulls(5), multiple: null },
-      fcf: { base: null, growth: nulls(5), multipleMode: 'hist', multiple: null },
+      ps: { revenue: null, baseDataYear: null, growth: nulls(5), multiple: null },
+      fcf: { base: null, baseDataYear: null, growth: nulls(5), multipleMode: 'hist', multiple: null },
       graham: { epsNtm: null, perNtmOverride: null, eps: null, gExpected: null, aaa: null },
       course: course
     };
@@ -104,11 +104,15 @@
   var seedsSeen = lsGet(KEYS.seeds, []);
   (window.SEED_COMPANIES || []).forEach(function (seed) {
     var stored = state.companies && state.companies[seed.id];
-    if (stored && (stored.seedVersion || 1) < (seed.seedVersion || 1) && seed.seedUpdate) {
-      var u = seed.seedUpdate;
-      (u.paths || []).forEach(function (p) { setPath(stored, p, JSON.parse(JSON.stringify(getPath(seed, p)))); });
-      if (u.removeExcluded) stored.excluded = (stored.excluded || []).filter(function (k) { return u.removeExcluded.indexOf(k) < 0; });
-      if (u.notesPrefix && (stored.notes || '').indexOf(u.notesPrefix) === 0) stored.notes = seed.notes;
+    if (stored && (stored.seedVersion || 1) < (seed.seedVersion || 1)) {
+      (seed.seedUpdates || []).forEach(function (u) {
+        if (u.version <= (stored.seedVersion || 1)) return;
+        function copy(p) { setPath(stored, p, JSON.parse(JSON.stringify(getPath(seed, p) === undefined ? null : getPath(seed, p)))); }
+        (u.paths || []).forEach(copy);
+        (u.pathsIfEmpty || []).forEach(function (p) { if (getPath(stored, p) == null) copy(p); });
+        if (u.removeExcluded) stored.excluded = (stored.excluded || []).filter(function (k) { return u.removeExcluded.indexOf(k) < 0; });
+        if (u.notesPrefix && (stored.notes || '').indexOf(u.notesPrefix) === 0) stored.notes = seed.notes;
+      });
       stored.seedVersion = seed.seedVersion;
     }
     if (seedsSeen.indexOf(seed.id) >= 0) return;
@@ -168,6 +172,8 @@
       var v = num(c.course.revenue[6]);
       return [v || null, 'Modelo financiero · ventas ' + c.baseYear];
     },
+    'ps.baseDataYear': function (c) { return [c.baseYear, 'Año base']; },
+    'fcf.baseDataYear': function (c) { return [c.baseYear, 'Año base']; },
     'ps.growth.*': function (c) { return [c.ratios.revCagr, 'Filtro · Rev CAGR']; },
     'fcf.base': function (c, R) {
       var v = R && R.course ? R.course.fcf[6] : null;
@@ -269,10 +275,13 @@
     R.epsA = C.epsAnalyst({ eps: c.eps.analyst, per: val(c, 'eps.per'), price: price, baseYear: by });
     R.epsG = C.epsGrowth({ baseEps: val(c, 'eps.baseEps'), cagr: val(c, 'eps.cagr'),
       per: val(c, 'eps.per'), price: price, baseYear: by, years: 5 });
+    // P/S y FCF: el dato base es del año base (LTM si viene de TIKR) y la proyección empieza el año siguiente
+    R.psDataYear = val(c, 'ps.baseDataYear') || by;
+    R.fcfDataYear = val(c, 'fcf.baseDataYear') || by;
     R.ps = C.metricMultiple({ base: val(c, 'ps.revenue'), growth: [0, 1, 2, 3, 4].map(function (i) { return val(c, 'ps.growth.' + i); }),
-      multiple: num(c.ps.multiple), shares: shares, price: price, baseYear: by });
+      multiple: num(c.ps.multiple), shares: shares, price: price, baseYear: R.psDataYear + 1 });
     R.fcf = C.metricMultiple({ base: val(c, 'fcf.base', R), growth: [0, 1, 2, 3, 4].map(function (i) { return val(c, 'fcf.growth.' + i); }),
-      multiple: val(c, 'fcf.multiple'), shares: shares, price: price, baseYear: by });
+      multiple: val(c, 'fcf.multiple'), shares: shares, price: price, baseYear: R.fcfDataYear + 1 });
     R.graham = C.graham({ price: price, epsNtm: val(c, 'graham.epsNtm'),
       perNtmOverride: c.graham.perNtmOverride, eps: val(c, 'graham.eps'),
       gExpected: val(c, 'graham.gExpected'), aaa: c.graham.aaa });
@@ -295,8 +304,8 @@
     var list = [
       { key: 'epsA', name: 'EPS analistas × PER hist.', tab: 'multiplos', byYear: fromRows(R.epsA), offset: 1 },
       { key: 'epsG', name: 'EPS propio × PER hist.', tab: 'multiplos', byYear: fromRows(R.epsG), offset: 1 },
-      { key: 'ps', name: 'Price to Sales', tab: 'multiplos', byYear: fromRows(R.ps), offset: 1 },
-      { key: 'fcf', name: 'FCF × múltiplo', tab: 'multiplos', byYear: fromRows(R.fcf), offset: 1 },
+      { key: 'ps', name: 'Price to Sales', tab: 'multiplos', byYear: fromRows(R.ps), offset: by - R.psDataYear },
+      { key: 'fcf', name: 'FCF × múltiplo', tab: 'multiplos', byYear: fromRows(R.fcf), offset: by - R.fcfDataYear },
       { key: 'cPer', name: 'Modelo · PER', tab: 'modelo', byYear: fromCourse(R.course.methods.per.prices), offset: 0 },
       { key: 'cPfcf', name: 'Modelo · P/FCF', tab: 'modelo', byYear: fromCourse(R.course.methods.pfcf.prices), offset: 0 },
       { key: 'cEvEbitda', name: 'Modelo · EV/EBITDA', tab: 'modelo', byYear: fromCourse(R.course.methods.evEbitda.prices), offset: 0 },
@@ -499,15 +508,15 @@
   views.resumen = {
     render: function () {
       var c = co(), by = Number(c.baseYear);
-      if (!state.horizon || state.horizon < by || state.horizon > by + 4) {
+      if (!state.horizon || state.horizon < by || state.horizon > by + 5) {
         // año por defecto: el último con más métodos con precio objetivo
         var list = methodList(computeAll(c)), excl = c.excluded || [], best = -1;
-        for (var y = by; y <= by + 4; y++) {
+        for (var y = by; y <= by + 5; y++) {
           var n = list.filter(function (m) { return excl.indexOf(m.key) < 0 && ok(m.byYear[y]) && m.byYear[y] > 0; }).length;
           if (n >= best) { best = n; state.horizon = y; }
         }
       }
-      var years = [0, 1, 2, 3, 4].map(function (i) { return [by + i, String(by + i)]; });
+      var years = [0, 1, 2, 3, 4, 5].map(function (i) { return [by + i, String(by + i)]; });
       return '<div class="view">' +
         '<div class="view-head"><h2>Resumen de valoración</h2>' +
         '<p>Todos los métodos en un mismo lugar. Cada barra es el precio objetivo que da un método para el año elegido. La línea naranja es el precio actual y la azul, el promedio de los precios objetivo.</p></div>' +
@@ -745,21 +754,23 @@
     render: function () {
       var c = co(), by = Number(c.baseYear);
       var yrs = [0, 1, 2, 3, 4];
+      var psY = num(c.ps.baseDataYear) || by, fcY = num(c.fcf.baseDataYear) || by;
       var epsA = '<table><thead><tr><th>Año</th><th>EPS estimado</th><th>Precio proyectado</th><th>Potencial</th></tr></thead><tbody>' +
         yrs.map(function (i) {
           return '<tr><td>' + (by + i) + '</td><td>' + inp('eps.analyst.' + i, { label: 'EPS ' + (by + i) }) + '</td><td id="ea-t-' + i + '"></td><td id="ea-u-' + i + '"></td></tr>';
         }).join('') + '</tbody></table>';
       var epsG = '<table><thead><tr><th>Año</th><th>EPS</th><th>Precio proyectado</th><th>Potencial</th></tr></thead><tbody>' +
         yrs.map(function (i) { return '<tr><td>' + (by + i) + '</td><td id="eg-e-' + i + '"></td><td id="eg-t-' + i + '"></td><td id="eg-u-' + i + '"></td></tr>'; }).join('') + '</tbody></table>';
-      function growthTable(prefix, path, valueLabel) {
+      function growthTable(prefix, path, valueLabel, dataYear) {
         return '<table><thead><tr><th>Año</th><th>Crecimiento %</th><th>' + valueLabel + '</th><th>Precio objetivo</th><th>Potencial</th></tr></thead><tbody>' +
           yrs.map(function (i) {
-            return '<tr><td>' + (by + i) + '</td><td>' + inp(path + '.' + i, { label: 'Crecimiento ' + (by + i) }) + '</td><td id="' + prefix + '-v-' + i + '"></td><td id="' + prefix + '-t-' + i + '"></td><td id="' + prefix + '-u-' + i + '"></td></tr>';
+            var y = dataYear + 1 + i;
+            return '<tr><td>' + y + '</td><td>' + inp(path + '.' + i, { label: 'Crecimiento ' + y }) + '</td><td id="' + prefix + '-v-' + i + '"></td><td id="' + prefix + '-t-' + i + '"></td><td id="' + prefix + '-u-' + i + '"></td></tr>';
           }).join('') + '</tbody></table>';
       }
       function foot(prefix) { return '<div class="kpis" id="' + prefix + '-foot"></div>'; }
       return '<div class="view">' +
-        '<div class="view-head"><h2>Proyección por múltiplos</h2><p>Las tres pestañas siguen la misma lógica: métrica futura × múltiplo promedio histórico = precio objetivo. Se comparan juntas abajo. Las celdas en azul toman su valor de otra pestaña; escribe encima para usar tu propio dato.</p></div>' +
+        '<div class="view-head"><h2>Proyección por múltiplos</h2><p>Las tres pestañas siguen la misma lógica: métrica futura × múltiplo promedio histórico = precio objetivo. Se comparan juntas abajo. En P/S y FCF el dato base es el del año base (LTM si cargaste TIKR) y la proyección empieza el año siguiente. Las celdas en azul toman su valor de otra pestaña; escribe encima para usar tu propio dato.</p></div>' +
         '<div class="panel"><div class="panel-head"><h3>Precio objetivo por año</h3><p>Línea punteada = precio actual</p></div><div class="chart-box"><canvas id="chMult"></canvas></div></div>' +
         '<div class="grid-2">' +
         '<div class="panel"><div class="panel-head"><h3>EPS con estimaciones de analistas</h3><p>EPS de TIKR</p></div>' +
@@ -768,13 +779,14 @@
         '<div class="form-grid">' + field('EPS ' + by, 'eps.baseEps') + field('Crecimiento anual', 'eps.cagr', { unit: '%' }) + field('PER histórico', 'eps.per', { unit: 'x' }) + '</div>' +
         '<div class="table-wrap">' + epsG + '</div>' + foot('eg') + '</div>' +
         '<div class="panel"><div class="panel-head"><h3>Price to Sales proyectado</h3><p>Ventas en millones</p></div>' +
-        '<div class="form-grid">' + field('Último revenue (M)', 'ps.revenue') + field('P/S promedio histórico', 'ps.multiple', { unit: 'x' }) +
+        '<div class="form-grid">' + field('Revenue base (M)', 'ps.revenue') + field('Año del revenue base', 'ps.baseDataYear') +
+        field('P/S promedio histórico', 'ps.multiple', { unit: 'x' }) +
         '<label class="field"><span>N° acciones (M)</span><input type="text" disabled id="ps-shares"><span class="hint">De los datos básicos</span></label></div>' +
-        '<div class="table-wrap">' + growthTable('ps', 'ps.growth', 'Ventas (M)') + '</div>' + foot('ps') + '</div>' +
+        '<div class="table-wrap">' + growthTable('ps', 'ps.growth', 'Ventas (M)', psY) + '</div>' + foot('ps') + '</div>' +
         '<div class="panel"><div class="panel-head"><h3>FCF proyectado</h3><p>FCF en millones</p></div>' +
-        '<div class="form-grid">' + field('Último FCF (M)', 'fcf.base') + field('Múltiplo P/FCF', 'fcf.multiple', { unit: 'x' }) +
+        '<div class="form-grid">' + field('FCF base (M)', 'fcf.base') + field('Año del FCF base', 'fcf.baseDataYear') + field('Múltiplo P/FCF', 'fcf.multiple', { unit: 'x' }) +
         '<div class="field"><span>Múltiplo a usar</span>' + seg('fcf.multipleMode', [['hist', 'Histórico'], ['actual', 'Actual']], c.fcf.multipleMode) + '</div></div>' +
-        '<div class="table-wrap">' + growthTable('fc', 'fcf.growth', 'FCF (M)') + '</div>' + foot('fc') + '</div>' +
+        '<div class="table-wrap">' + growthTable('fc', 'fcf.growth', 'FCF (M)', fcY) + '</div>' + foot('fc') + '</div>' +
         '</div></div>';
     },
     update: function (R) {
@@ -786,7 +798,9 @@
           setText(prefix + '-t-' + i, money(r.target));
           setText(prefix + '-u-' + i, '<span class="' + signCls(r.upside) + '">' + pctf(r.upside, true) + '</span>');
         });
-        setText(prefix + '-foot', kpi('Retorno total', '<span class="' + signCls(res.totalReturn) + '">' + pctf(res.totalReturn, true) + '</span>', 'Al ' + (R.baseYear + 4)) +
+        var lastY = null;
+        res.rows.forEach(function (r) { if (ok(r.target)) lastY = r.year; });
+        setText(prefix + '-foot', kpi('Retorno total', '<span class="' + signCls(res.totalReturn) + '">' + pctf(res.totalReturn, true) + '</span>', lastY ? 'Al ' + lastY : '—') +
           kpi('CAGR anual', '<span class="' + signCls(res.cagr) + '">' + pctf(res.cagr, true) + '</span>', 'Tu Excel (retorno ÷ 5): ' + pctf(res.simpleAvg)));
       }
       fill('ea', R.epsA, false);
@@ -798,11 +812,16 @@
 
       var pal = palette();
       var sets = [['EPS analistas', R.epsA], ['EPS propio', R.epsG], ['Price to Sales', R.ps], ['FCF', R.fcf]];
+      var chartYears = [];
+      sets.forEach(function (s) { s[1].rows.forEach(function (r) { if (chartYears.indexOf(r.year) < 0) chartYears.push(r.year); }); });
+      chartYears.sort();
       drawChart('chMult', {
         type: 'line',
-        data: { labels: R.epsA.rows.map(function (r) { return String(r.year); }),
+        data: { labels: chartYears.map(String),
           datasets: sets.map(function (s, i) {
-            return { label: s[0], data: s[1].rows.map(function (r) { return ok(r.target) && r.target > 0 ? r.target : null; }),
+            var m = {};
+            s[1].rows.forEach(function (r) { m[r.year] = r.target; });
+            return { label: s[0], data: chartYears.map(function (y) { var v = m[y]; return ok(v) && v > 0 ? v : null; }),
               borderColor: pal[i], backgroundColor: alpha(pal[i], 0.12), borderWidth: 2.2, pointRadius: 3, tension: 0.25, spanGaps: true };
           }) },
         options: baseOptions({ plugins: { legend: { position: 'bottom' },
@@ -1152,7 +1171,7 @@
       update(); scheduleSave();
       return;
     }
-    if (el.matches('#f-baseYear')) renderView();
+    if (el.matches('#f-baseYear') || /baseDataYear$/.test(el.getAttribute('data-path') || '')) renderView();
     if (el.matches('select[data-rule]')) { update(); scheduleSave(); }
   });
 
@@ -1369,6 +1388,10 @@
       TIKR_FIELDS.forEach(function (f) { c.course[f] = [null, null, null, null, null, null, null]; });
     }
     var n = window.Tikr.applyToCompany(c, p.res);
+    // P/S y FCF parten del LTM: ventas (vínculo al Modelo financiero) y FCF de TIKR (misma definición que su P/FCF)
+    var ltm = p.res.years[p.res.baseYear] || {};
+    c.ps.revenue = null; c.ps.baseDataYear = null; c.fcf.baseDataYear = null;
+    if (ltm.fcfTikr !== undefined) c.fcf.base = ltm.fcfTikr;
     if (!num(c.shares) && c.course.shares[6]) c.shares = c.course.shares[6];
     if (p.res.missing.indexOf('capex') >= 0) {
       c.excluded = (c.excluded || []).filter(function (k) { return k !== 'cPfcf'; }).concat(['cPfcf']);

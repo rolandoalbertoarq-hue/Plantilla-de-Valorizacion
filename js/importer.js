@@ -274,11 +274,12 @@
       var y = S.n(r, hYears.c);
       if (y !== null && firstYear === null) firstYear = y;
     }
-    var offset = firstYear !== null && out.baseYear ? firstYear - out.baseYear : 0;
+    // el dato base es del año anterior al primer año proyectado
+    res.baseDataYear = firstYear !== null ? firstYear - 1 : null;
     for (r = hr + 1; r <= hr + 6 && grC >= 0; r++) {
       var gv = S.input(r, grC);
       if (gv === null) continue;
-      var idx = gi + offset; gi++;
+      var idx = gi; gi++;
       if (idx >= 0 && idx < 5) res.growth[idx] = Math.abs(gv) <= 1.5 ? Math.round(gv * 10000) / 100 : gv;
     }
     if (res.base !== null) log.push((kind === 'ps' ? 'Price to Sales' : 'FCF proyectado') + ': datos importados');
@@ -299,6 +300,7 @@
       var p = readMetric(Sheet(ps, XLSX), 'ps', out, log);
       if (p) {
         if (p.base !== null) out.ps.revenue = p.base;
+        if (p.baseDataYear !== null) out.ps.baseDataYear = p.baseDataYear;
         if (p.multiple !== null) out.ps.multiple = p.multiple;
         out.ps.growth = p.growth;
         if (p.shares !== null && out.shares == null) out.shares = p.shares;
@@ -310,6 +312,7 @@
       var q = readMetric(Sheet(fc, XLSX), 'fcf', out, log);
       if (q) {
         if (q.base !== null) out.fcf.base = q.base;
+        if (q.baseDataYear !== null) out.fcf.baseDataYear = q.baseDataYear;
         if (q.multiple !== null) { out.fcf.multiple = q.multiple; }
         out.fcf.growth = q.growth;
         if (q.shares !== null && out.shares == null) out.shares = q.shares;

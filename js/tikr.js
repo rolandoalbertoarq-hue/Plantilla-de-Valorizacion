@@ -182,6 +182,8 @@
       // Capex = compra de activos fijos + compra de intangibles (en positivo)
       var capex = sumRows(cf, ['capital expenditure', 'sale (purchase) of intangible assets']);
       put(cf, 'capex', capex, function (v) { return -v; });
+      // FCF según TIKR (Cash from Operations − Capital Expenditure), para la pestaña FCF proyectado
+      put(cf, 'fcfTikr', pickRow(cf, ['free cash flow', 'levered free cash flow']));
       var lease = pickRow(cf, ['repayment of lease liabilities', 'principal payments on finance leases']);
       if (lease) put(cf, 'leases', lease, function (v) { return Math.abs(v); });
       log.push('Cash Flow');

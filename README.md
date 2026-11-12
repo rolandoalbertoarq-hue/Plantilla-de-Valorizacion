@@ -46,6 +46,8 @@ Cómo se traduce cada dato:
 | Deuda por leases | Current Portion of Capital Lease Obligations + Capital Leases |
 | Goodwill / Equity | Goodwill / Total Common Equity |
 
+Además, P/S y FCF proyectado parten del LTM: el revenue base es el del Modelo financiero y el FCF base es el "Free Cash Flow" de TIKR (Cash from Operations − Capital Expenditure), que es la definición que usa TIKR para su múltiplo P/FCF. La proyección empieza el año siguiente al LTM.
+
 Con esto la deuda neta coincide con la "Net Debt" de TIKR. El LTM queda como año base (año en curso); los cierres fiscales de enero a mayo cuentan para el año calendario anterior.
 
 ## Empresas precargadas

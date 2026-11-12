@@ -1,8 +1,8 @@
 /*
  * Empresas que vienen cargadas en la app. Se agregan una sola vez por navegador;
  * si las eliminas no vuelven a aparecer.
- * seedVersion + seedUpdate: si el navegador ya tenía una versión anterior de la empresa,
- * solo se reemplazan esas rutas (lo demás que el usuario haya llenado se respeta).
+ * seedVersion + seedUpdates: si el navegador ya tenía una versión anterior de la empresa, se aplican
+ * solo las actualizaciones posteriores (paths: se reemplazan; pathsIfEmpty: solo si el usuario no las llenó).
  */
 window.SEED_COMPANIES = [
   {
@@ -54,7 +54,8 @@ window.SEED_COMPANIES = [
         15,
         15
       ],
-      "multiple": 5.5
+      "multiple": 5.5,
+      "baseDataYear": 2024
     },
     "fcf": {
       "base": null,
@@ -66,7 +67,8 @@ window.SEED_COMPANIES = [
         null
       ],
       "multipleMode": "hist",
-      "multiple": null
+      "multiple": null,
+      "baseDataYear": null
     },
     "graham": {
       "epsNtm": null,
@@ -236,6 +238,15 @@ window.SEED_COMPANIES = [
       "fcf",
       "graham",
       "grahamRev"
+    ],
+    "seedVersion": 2,
+    "seedUpdates": [
+      {
+        "version": 2,
+        "pathsIfEmpty": [
+          "ps.baseDataYear"
+        ]
+      }
     ]
   },
   {
@@ -277,10 +288,11 @@ window.SEED_COMPANIES = [
         null,
         null
       ],
-      "multiple": null
+      "multiple": null,
+      "baseDataYear": null
     },
     "fcf": {
-      "base": null,
+      "base": 127006,
       "growth": [
         null,
         null,
@@ -289,7 +301,8 @@ window.SEED_COMPANIES = [
         null
       ],
       "multipleMode": "hist",
-      "multiple": null
+      "multiple": null,
+      "baseDataYear": null
     },
     "graham": {
       "epsNtm": null,
@@ -453,17 +466,26 @@ window.SEED_COMPANIES = [
         228984
       ]
     },
-    "seedVersion": 2,
-    "seedUpdate": {
-      "paths": [
-        "course.capex",
-        "course.da",
-        "course.leases"
-      ],
-      "removeExcluded": [
-        "cPfcf"
-      ],
-      "notesPrefix": "Datos de TIKR (Libro1.xlsx). Precio"
-    }
+    "seedVersion": 3,
+    "seedUpdates": [
+      {
+        "paths": [
+          "course.capex",
+          "course.da",
+          "course.leases"
+        ],
+        "removeExcluded": [
+          "cPfcf"
+        ],
+        "notesPrefix": "Datos de TIKR (Libro1.xlsx). Precio",
+        "version": 2
+      },
+      {
+        "version": 3,
+        "pathsIfEmpty": [
+          "fcf.base"
+        ]
+      }
+    ]
   }
 ];
