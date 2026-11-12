@@ -117,6 +117,11 @@ tr.off td:first-child a { color: var(--muted); }
 .name-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .upd-pill { text-transform: none; letter-spacing: 0; font-style: normal; font-weight: 500; font-size: .72rem; }
 .pill.warn { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+.switch { display: inline-flex; align-items: center; gap: 8px; min-height: 34px; cursor: pointer; font-size: .88rem; }
+.switch input { width: auto; accent-color: var(--accent); width: 16px; height: 16px; }
+.row-link { cursor: pointer; }
+.row-link:hover td { background: var(--surface-2); }
+.tag-port { font-size: .7rem; }
 .notes-box { font-family: var(--font-body); font-size: .9rem; line-height: 1.5; }
 .confirm-bar {
   display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding-block: 8px;
@@ -164,7 +169,7 @@ textarea { font-family: var(--font-mono); font-size: .8rem; resize: vertical; }
   display: flex; flex-direction: column; gap: 16px;
 }
 .basics {
-  display: grid; gap: 12px; grid-template-columns: 120px minmax(160px, 1fr) 140px 170px 100px;
+  display: grid; gap: 12px; grid-template-columns: 120px minmax(160px, 1fr) 130px 160px 90px 150px;
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px;
 }
 #f-ticker { text-transform: uppercase; font-family: var(--font-mono); font-weight: 500; }

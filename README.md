@@ -63,6 +63,7 @@ Las empresas precargadas se agregan una sola vez por navegador; si las eliminas,
 | Pestaña | Viene del Excel | Qué hace |
 |---|---|---|
 | **Datos básicos** (arriba, siempre visibles) | Filtro 1 | Ticker, precio actual, n° de acciones (millones) y año base. |
+| **Portafolio** | — (nuevo) | Rendimiento anualizado esperado a 5 años de las empresas en tu portafolio y su promedio con el mismo peso. |
 | **Resumen** | — (nuevo) | Precio objetivo de todos los métodos para el año elegido, frente al precio actual. Mediana, potencial y CAGR. Puedes desmarcar métodos que no apliquen y escribir notas de la tesis. |
 | **1 · Filtro** | Filtro 1 | Plantillas General, REITs, Tecnológicas, Servicios y Financieras. Calificación Good/Not, reglas editables y múltiplo máximo según crecimiento. |
 | **2 · Earnings Growth** | F2-EGM, inst-EGM | Modelo de Compound Quality: EPS growth + shareholder yield ± cambio de valoración. Margen de seguridad, regla del 72 y retorno mínimo exigido. |
@@ -76,7 +77,15 @@ Las celdas con fondo azul toman su valor de otra pestaña (por ejemplo, el PER h
 
 ### Fecha de actualización
 
-Junto al nombre de cada empresa aparece la última fecha en que se cambiaron sus datos y hace cuánto fue: en verde hasta 30 días, en ámbar hasta 90 y en rojo después. La lista de empresas también muestra la fecha. Se actualiza sola al editar cualquier dato o cargar datos de TIKR; al importar un Excel se toma la fecha del nombre del archivo si la tiene (`2025-06-23_GOOGL_PDV.xlsx`).
+Junto al nombre de cada empresa aparece la última fecha en que se actualizaron sus datos y hace cuánto fue: en verde hasta 30 días, en ámbar hasta 90 y en rojo después. La lista de empresas también muestra la fecha. Cambia al cargar datos de TIKR, al importar un Excel (se toma la fecha del nombre del archivo si la tiene, como `2025-06-23_GOOGL_PDV.xlsx`) y al modificar las proyecciones EPS, P/S o FCF. Ajustar el precio actual u otros datos no la cambia.
+
+### Portafolio
+
+Marca "En mi portafolio" en los datos básicos de cada empresa que tengas en cartera. La pestaña **Portafolio** muestra:
+
+- El rendimiento anualizado esperado a 5 años de cada empresa: la mediana del CAGR de sus métodos marcados en el Resumen (precio objetivo a 5 años del año base, o el último año disponible) más su dividend yield.
+- El **promedio con el mismo peso** para todas las empresas del portafolio, sin importar su peso real en la cartera.
+- Las empresas fuera del portafolio, con el mismo cálculo, para comparar.
 
 ### Convención de porcentajes
 

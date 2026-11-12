@@ -534,6 +534,102 @@
   // ======================================================================
   var views = {};
 
+  // ======================================================================
+  // Rendimiento esperado a 5 años de una empresa (para la vista Portafolio)
+  // ======================================================================
+  /**
+   * Para cada método marcado en el Resumen se toma su precio objetivo a 5 años del año base
+   * (o el último año disponible antes) y su CAGR. El rendimiento de la empresa es la mediana de
+   * esos CAGR más el dividend yield del Filtro.
+   */
+  function companyReturn(c) {
+    var R = computeAll(c), by = R.baseYear, price = R.price, excl = c.excluded || [];
+    var cagrs = [];
+    if (ok(price) && price > 0) {
+      methodList(R).forEach(function (m) {
+        if (excl.indexOf(m.key) >= 0) return;
+        var best = null;
+        Object.keys(m.byYear).forEach(function (y) {
+          y = Number(y);
+          var t = m.byYear[y];
+          if (y <= by + 5 && ok(t) && t > 0 && (best === null || y > best)) best = y;
+        });
+        if (best === null) return;
+        var years = best - by + m.offset;
+        var g = years > 0 ? C.cagr(m.byYear[best], price, years) : null;
+        if (ok(g)) cagrs.push(g);
+      });
+    }
+    var cagr = median(cagrs);
+    var dy = (num(c.ratios.dividend) || 0) / 100;
+    return { c: c, R: R, price: price, cagr: cagr, dividend: dy, total: ok(cagr) ? cagr + dy : null,
+      methods: cagrs.length, implied: ok(cagr) ? price * Math.pow(1 + cagr, 5) : null, egm: R.egm.total };
+  }
+
+  views.portafolio = {
+    render: function () {
+      return '<div class="view">' +
+        '<div class="view-head"><h2>Portafolio</h2><p>Rendimiento anualizado esperado de los próximos 5 años para las empresas marcadas "En mi portafolio", todas con el mismo peso. Cada empresa aporta la mediana del CAGR de sus métodos marcados en el Resumen, más su dividend yield.</p></div>' +
+        '<div class="kpis" id="pfKpis"></div>' +
+        '<div class="panel"><div class="panel-head"><h3>Rendimiento anualizado por empresa</h3><p>Línea azul = promedio con peso igual</p></div>' +
+        '<div class="chart-box" id="pfChartBox"><canvas id="chPortfolio"></canvas></div></div>' +
+        '<div class="panel"><div class="panel-head"><h3>En mi portafolio</h3><p>Haz clic en una empresa para abrirla</p></div><div class="table-wrap"><table id="pfIn"></table></div></div>' +
+        '<div class="panel"><div class="panel-head"><h3>Fuera del portafolio</h3><p>En seguimiento</p></div><div class="table-wrap"><table id="pfOut"></table></div></div>' +
+        '<p class="hint">Cómo se calcula: para cada método marcado en el Resumen se toma el precio objetivo a 5 años del año base de la empresa (o el último año disponible) y su CAGR frente al precio actual. La mediana de esos CAGR más el dividend yield es el rendimiento de la empresa. El promedio del portafolio es simple: no usa el peso de cada posición. El EGM se muestra como referencia y no entra en el promedio.</p>' +
+        '</div>';
+    },
+    update: function () {
+      var all = Object.keys(state.companies).map(function (id) { return companyReturn(state.companies[id]); });
+      var inP = all.filter(function (x) { return x.c.inPortfolio; });
+      var outP = all.filter(function (x) { return !x.c.inPortfolio; });
+      var valid = inP.filter(function (x) { return ok(x.total); });
+      var avg = valid.length ? valid.reduce(function (s, x) { return s + x.total; }, 0) / valid.length : null;
+      var egms = inP.filter(function (x) { return ok(x.egm); });
+      var avgEgm = egms.length ? egms.reduce(function (s, x) { return s + x.egm; }, 0) / egms.length : null;
+      var sorted = valid.slice().sort(function (a, b) { return b.total - a.total; });
+      setText('pfKpis',
+        kpi('Rendimiento anual promedio', pctf(avg), valid.length ? 'Próximos 5 años · ' + valid.length + ' empresas con el mismo peso' : 'Marca empresas "En mi portafolio"', true) +
+        kpi('$10.000 en 5 años', ok(avg) ? money(10000 * Math.pow(1 + avg, 5)) : '—', 'Si el portafolio rinde el promedio') +
+        kpi('Mejor / peor', sorted.length ? esc(tickerOf(sorted[0].c)) + ' ' + pctf(sorted[0].total) + ' · ' + esc(tickerOf(sorted[sorted.length - 1].c)) + ' ' + pctf(sorted[sorted.length - 1].total) : '—', 'Rendimiento anual esperado') +
+        kpi('EGM promedio', pctf(avgEgm), 'Referencia: Earnings Growth Model') +
+        kpi('Sin datos', String(inP.length - valid.length), inP.length - valid.length ? 'Empresas del portafolio sin precio objetivo' : 'Todas tienen valoración'));
+
+      function rows(list, inPortfolio) {
+        if (!list.length) return '<tbody><tr><td colspan="9" class="muted">' + (inPortfolio ? 'Aún no marcas empresas. Usa la casilla "En mi portafolio" en los datos básicos.' : 'No hay empresas fuera del portafolio.') + '</td></tr></tbody>';
+        return '<thead><tr><th>Empresa</th><th>Actualizado</th><th>Precio</th><th>Precio implícito 5 años</th><th>CAGR precio</th><th>Dividendo</th><th>Rendimiento anual</th><th>EGM</th><th></th></tr></thead><tbody>' +
+          list.map(function (x) {
+            var f = fmtDate(x.c.updatedAt);
+            return '<tr class="row-link" data-open="' + x.c.id + '"><td><b>' + esc(tickerOf(x.c)) + '</b> <span class="muted">' + esc(x.c.name || '') + '</span></td>' +
+              '<td>' + (f ? esc(f) : '—') + '</td><td>' + money(x.price) + '</td><td>' + money(x.implied) + '</td>' +
+              '<td class="' + signCls(x.cagr) + '">' + pctf(x.cagr, true) + '</td><td>' + pctf(x.dividend) + '</td>' +
+              '<td class="' + signCls(x.total) + '"><b>' + pctf(x.total, true) + '</b></td><td>' + pctf(x.egm) + '</td>' +
+              '<td><button type="button" class="btn" data-toggle-portfolio="' + x.c.id + '">' + (inPortfolio ? 'Quitar' : 'Agregar') + '</button></td></tr>';
+          }).join('') +
+          (inPortfolio && valid.length ? '<tr class="total"><td>Promedio (mismo peso)</td><td></td><td></td><td></td><td></td><td></td><td class="' + signCls(avg) + '">' + pctf(avg, true) + '</td><td>' + pctf(avgEgm) + '</td><td></td></tr>' : '') +
+          '</tbody>';
+      }
+      setText('pfIn', rows(inP.sort(function (a, b) { return (b.total || -9) - (a.total || -9); }), true));
+      setText('pfOut', rows(outP.sort(function (a, b) { return (b.total || -9) - (a.total || -9); }), false));
+
+      var box = document.getElementById('pfChartBox');
+      if (box) box.style.height = Math.max(160, 70 + sorted.length * 38) + 'px';
+      var good = tok('--good'), bad = tok('--bad');
+      drawChart('chPortfolio', {
+        type: 'bar',
+        data: { labels: sorted.map(function (x) { return tickerOf(x.c); }),
+          datasets: [{ label: 'Rendimiento anual', data: sorted.map(function (x) { return x.total * 100; }),
+            backgroundColor: sorted.map(function (x) { return alpha(x.total >= 0 ? good : bad, 0.75); }), borderRadius: 4, barPercentage: 0.7 }] },
+        options: baseOptions({ indexAxis: 'y', interaction: { mode: 'nearest', axis: 'y', intersect: false },
+          plugins: { legend: { display: false },
+            tooltip: { callbacks: { label: function (ctx) { var x = sorted[ctx.dataIndex]; return pctf(x.total) + ' (precio ' + pctf(x.cagr) + ' + dividendo ' + pctf(x.dividend) + ')'; } } },
+            refLine: { lines: [{ axis: 'x', value: ok(avg) ? avg * 100 : null, color: tok('--accent'), label: 'Promedio ' + pctf(avg), dash: [2, 3], labelAt: 'bottom' }] } },
+          scales: { x: { beginAtZero: true, ticks: { callback: function (v) { return v + '%'; } } }, y: { grid: { display: false } } } })
+      });
+    }
+  };
+  function tickerOf(c) { return c.ticker ? c.ticker.toUpperCase() : 'Sin ticker'; }
+
+
   views.resumen = {
     render: function () {
       var c = co(), by = Number(c.baseYear);
@@ -1120,7 +1216,7 @@
   // ======================================================================
   // Control general
   // ======================================================================
-  var TABS = ['resumen', 'filtro', 'egm', 'multiplos', 'graham', 'modelo'];
+  var TABS = ['portafolio', 'resumen', 'filtro', 'egm', 'multiplos', 'graham', 'modelo'];
 
   function renderView() {
     destroyCharts();
@@ -1164,6 +1260,11 @@
     el.className = 'pill upd-pill ' + (days <= 30 ? 'good' : days <= 90 ? 'warn' : 'bad');
     el.textContent = 'Actualizado ' + f + ' · ' + ageText(c.updatedAt);
   }
+  /**
+   * La fecha de actualización solo cambia al cargar datos (TIKR / Excel) o al modificar las
+   * proyecciones por múltiplos (EPS, P/S, FCF). El precio y los demás ajustes no la mueven.
+   */
+  function isProjectionPath(path) { return /^(eps|ps|fcf)\./.test(path); }
   /** Marca la empresa como actualizada ahora (o en la fecha indicada). */
   function touch(c, when) {
     var prevDay = (c.updatedAt || '').slice(0, 10);
@@ -1177,6 +1278,7 @@
       var el = document.getElementById('f-' + k);
       if (el) el.value = c[k] === null || c[k] === undefined ? '' : c[k];
     });
+    document.getElementById('f-inPortfolio').checked = !!c.inPortfolio;
   }
   function companyLabel(c) {
     return (c.ticker ? c.ticker.toUpperCase() : 'Sin ticker') + (c.name ? ' · ' + c.name : '');
@@ -1186,10 +1288,14 @@
     var ids = Object.keys(state.companies).sort(function (a, b) {
       return companyLabel(state.companies[a]).localeCompare(companyLabel(state.companies[b]));
     });
-    sel.innerHTML = ids.map(function (id) {
+    function opt(id) {
       var c = state.companies[id], f = fmtDate(c.updatedAt);
       return '<option value="' + id + '"' + (id === state.currentId ? ' selected' : '') + '>' + esc(companyLabel(c)) + (f ? ' — ' + esc(f) : '') + '</option>';
-    }).join('');
+    }
+    var inP = ids.filter(function (id) { return state.companies[id].inPortfolio; });
+    var out = ids.filter(function (id) { return !state.companies[id].inPortfolio; });
+    sel.innerHTML = (inP.length ? '<optgroup label="En portafolio (' + inP.length + ')">' + inP.map(opt).join('') + '</optgroup>' : '') +
+      '<optgroup label="Fuera del portafolio (' + out.length + ')">' + out.map(opt).join('') + '</optgroup>';
   }
   function switchTo(id) {
     state.currentId = id;
@@ -1198,6 +1304,7 @@
   }
 
   function readInput(el) {
+    if (el.type === 'checkbox') return el.checked;
     if (el.type === 'number') {
       if (el.value === '') return null;
       var v = Number(el.value);
@@ -1214,10 +1321,10 @@
       var v = readInput(el);
       if (path === 'baseYear') { if (v === null) return; v = Math.round(v); }
       setPath(co(), path, v);
-      touch(co());
+      if (isProjectionPath(path)) touch(co());
       // mismo dato mostrado en otro campo de la vista (p. ej. PER histórico dos veces)
       document.querySelectorAll('input[data-path="' + path + '"]').forEach(function (o) { if (o !== el) o.value = el.value; });
-      if (path === 'ticker' || path === 'name') fillSelect();
+      if (path === 'ticker' || path === 'name' || path === 'inPortfolio') fillSelect();
       update(); scheduleSave();
     } else if (el.matches('[data-rule]')) {
       var c = co(), i = Number(el.getAttribute('data-rule')), f = el.getAttribute('data-field');
@@ -1248,13 +1355,23 @@
       else if (path === '_courseSub') state.courseSub = value;
       else {
         setPath(co(), path, value);
-        touch(co());
+        if (isProjectionPath(path)) touch(co());
         if (path === 'fcf.multipleMode') co().fcf.multiple = null;
         scheduleSave();
       }
       renderView();
       return;
     }
+    var tg = ev.target.closest('[data-toggle-portfolio]');
+    if (tg) {
+      var tc = state.companies[tg.getAttribute('data-toggle-portfolio')];
+      tc.inPortfolio = !tc.inPortfolio;
+      if (tc.id === state.currentId) fillBasics();
+      fillSelect(); update(); scheduleSave();
+      return;
+    }
+    var op = ev.target.closest('[data-open]');
+    if (op) { switchTo(op.getAttribute('data-open')); location.hash = '#resumen'; return; }
     var s = ev.target.closest('[data-sub]');
     if (s) { ev.preventDefault(); state.courseSub = s.getAttribute('data-sub'); renderView(); return; }
     if (ev.target.id === 'btnResetRules') {
