@@ -88,6 +88,14 @@ a { color: var(--accent); }
   justify-content: space-between; flex-wrap: wrap;
 }
 .brand { display: flex; gap: 10px; align-items: center; min-width: 0; }
+.mainnav { display: inline-flex; gap: 2px; background: var(--surface-2); padding: 3px; border-radius: 10px; margin-right: auto; margin-left: 12px; }
+.mainnav a {
+  text-decoration: none; color: var(--muted); font-family: var(--font-display); font-weight: 600; font-size: .95rem;
+  padding: 7px 16px; border-radius: 8px; white-space: nowrap;
+}
+.mainnav a:hover { color: var(--ink); }
+.mainnav a[aria-current="page"] { background: var(--surface); color: var(--accent); box-shadow: var(--shadow); }
+.company-row { padding-block: 0 10px; justify-content: flex-start; }
 .brand-mark {
   width: 28px; height: 28px; border-radius: 7px; flex: none;
   background:
@@ -211,6 +219,7 @@ textarea { font-family: var(--font-mono); font-size: .8rem; resize: vertical; }
 .kpi .v { font-family: var(--font-mono); font-size: 1.45rem; font-weight: 500; font-variant-numeric: tabular-nums; line-height: 1.25; }
 .kpi .s { font-size: .78rem; color: var(--muted); }
 .kpi.hero { border-color: var(--accent); background: var(--accent-soft); }
+.kpi .v .kpi-sm { font-size: 1.05rem; line-height: 1.4; display: inline-block; }
 
 /* pills */
 .pill {
@@ -286,6 +295,8 @@ td input.wide { width: 100%; }
   .basics .grow { grid-column: span 2; }
 }
 @media (max-width: 560px) {
+  .mainnav { order: 3; width: 100%; margin: 0; }
+  .mainnav a { flex: 1; text-align: center; padding: 7px 8px; font-size: .88rem; }
   .company-bar { width: 100%; }
   .company-bar .field { flex: 1 1 100%; }
   .chart-box { height: 260px; }

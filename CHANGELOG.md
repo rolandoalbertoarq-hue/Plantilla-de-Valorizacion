@@ -2,7 +2,9 @@
 
 ## Versión 2 — commit `710ea7b`
 
-- **Portafolio**: casilla "En mi portafolio" en los datos básicos y nueva pestaña Portafolio con el rendimiento anualizado esperado a 5 años de cada empresa y el promedio con el mismo peso para todas. La lista de empresas se agrupa en "En portafolio" y "Fuera del portafolio".
+- **Dos secciones principales** (ajuste posterior al cierre): Portafolio y Plantillas de valoración, en la barra superior. La barra de empresa, los datos básicos y las pestañas 1–5 solo aparecen en Plantillas.
+
+- **Portafolio**: casilla "En mi portafolio" en los datos básicos y nueva sección Portafolio con el rendimiento anualizado esperado a 5 años de cada empresa y el promedio con el mismo peso para todas. La lista de empresas se agrupa en "En portafolio" y "Fuera del portafolio".
 
 - **Pegar de TIKR**: copia el Income Statement, el Balance Sheet y el Cash Flow desde TIKR (o un Excel donde los pegaste) y la app llena los años históricos del Modelo financiero. El LTM queda como año base; los cierres fiscales de enero a mayo cuentan para el año calendario anterior (NVDA: FY2026, que cerró en ene-2026, va en 2025).
 - **Múltiplos actuales**: en Valoración del Modelo financiero se muestran el PER, P/FCF, EV/EBITDA y EV/EBIT de hoy con los datos del año base. Si no hay múltiplo histórico en el Filtro, se usa el actual.

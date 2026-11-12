@@ -569,11 +569,11 @@
   views.portafolio = {
     render: function () {
       return '<div class="view">' +
-        '<div class="view-head"><h2>Portafolio</h2><p>Rendimiento anualizado esperado de los próximos 5 años para las empresas marcadas "En mi portafolio", todas con el mismo peso. Cada empresa aporta la mediana del CAGR de sus métodos marcados en el Resumen, más su dividend yield.</p></div>' +
+        '<div class="view-head"><h2>Portafolio</h2><p>Rendimiento anualizado esperado de los próximos 5 años para las empresas marcadas "En mi portafolio" (casilla en los datos básicos de cada plantilla), todas con el mismo peso. Cada empresa aporta la mediana del CAGR de sus métodos marcados en el Resumen, más su dividend yield.</p></div>' +
         '<div class="kpis" id="pfKpis"></div>' +
         '<div class="panel"><div class="panel-head"><h3>Rendimiento anualizado por empresa</h3><p>Línea azul = promedio con peso igual</p></div>' +
         '<div class="chart-box" id="pfChartBox"><canvas id="chPortfolio"></canvas></div></div>' +
-        '<div class="panel"><div class="panel-head"><h3>En mi portafolio</h3><p>Haz clic en una empresa para abrirla</p></div><div class="table-wrap"><table id="pfIn"></table></div></div>' +
+        '<div class="panel"><div class="panel-head"><h3>En mi portafolio</h3><p>Haz clic en una empresa para abrir su plantilla</p></div><div class="table-wrap"><table id="pfIn"></table></div></div>' +
         '<div class="panel"><div class="panel-head"><h3>Fuera del portafolio</h3><p>En seguimiento</p></div><div class="table-wrap"><table id="pfOut"></table></div></div>' +
         '<p class="hint">Cómo se calcula: para cada método marcado en el Resumen se toma el precio objetivo a 5 años del año base de la empresa (o el último año disponible) y su CAGR frente al precio actual. La mediana de esos CAGR más el dividend yield es el rendimiento de la empresa. El promedio del portafolio es simple: no usa el peso de cada posición. El EGM se muestra como referencia y no entra en el promedio.</p>' +
         '</div>';
@@ -590,12 +590,12 @@
       setText('pfKpis',
         kpi('Rendimiento anual promedio', pctf(avg), valid.length ? 'Próximos 5 años · ' + valid.length + ' empresas con el mismo peso' : 'Marca empresas "En mi portafolio"', true) +
         kpi('$10.000 en 5 años', ok(avg) ? money(10000 * Math.pow(1 + avg, 5)) : '—', 'Si el portafolio rinde el promedio') +
-        kpi('Mejor / peor', sorted.length ? esc(tickerOf(sorted[0].c)) + ' ' + pctf(sorted[0].total) + ' · ' + esc(tickerOf(sorted[sorted.length - 1].c)) + ' ' + pctf(sorted[sorted.length - 1].total) : '—', 'Rendimiento anual esperado') +
+        kpi('Mejor / peor', sorted.length ? '<span class="kpi-sm">' + esc(tickerOf(sorted[0].c)) + ' ' + pctf(sorted[0].total) + '<br>' + esc(tickerOf(sorted[sorted.length - 1].c)) + ' ' + pctf(sorted[sorted.length - 1].total) + '</span>' : '—', 'Rendimiento anual esperado') +
         kpi('EGM promedio', pctf(avgEgm), 'Referencia: Earnings Growth Model') +
         kpi('Sin datos', String(inP.length - valid.length), inP.length - valid.length ? 'Empresas del portafolio sin precio objetivo' : 'Todas tienen valoración'));
 
       function rows(list, inPortfolio) {
-        if (!list.length) return '<tbody><tr><td colspan="9" class="muted">' + (inPortfolio ? 'Aún no marcas empresas. Usa la casilla "En mi portafolio" en los datos básicos.' : 'No hay empresas fuera del portafolio.') + '</td></tr></tbody>';
+        if (!list.length) return '<tbody><tr><td colspan="9" class="muted">' + (inPortfolio ? 'Aún no hay empresas en el portafolio. Usa "Agregar" abajo o la casilla "En mi portafolio" en la plantilla de cada empresa.' : 'No hay empresas fuera del portafolio.') + '</td></tr></tbody>';
         return '<thead><tr><th>Empresa</th><th>Actualizado</th><th>Precio</th><th>Precio implícito 5 años</th><th>CAGR precio</th><th>Dividendo</th><th>Rendimiento anual</th><th>EGM</th><th></th></tr></thead><tbody>' +
           list.map(function (x) {
             var f = fmtDate(x.c.updatedAt);
@@ -1224,6 +1224,20 @@
     document.getElementById('view').innerHTML = v.render();
     document.querySelectorAll('.tabs a').forEach(function (a) {
       a.setAttribute('aria-selected', String(a.getAttribute('data-tab') === state.tab));
+    });
+    // Dos secciones principales: Portafolio (todas las empresas) y Plantillas de valoración (una empresa)
+    var inPortfolio = state.tab === 'portafolio';
+    ['companyRow', 'basics', 'templateTabs'].forEach(function (id) { document.getElementById(id).hidden = inPortfolio; });
+    if (!inPortfolio) {
+      state.lastTemplateTab = state.tab;
+      try { localStorage.setItem('pv.lastTemplateTab', state.tab); } catch (e) { /* sin almacenamiento */ }
+    } else if (!state.lastTemplateTab) {
+      try { state.lastTemplateTab = localStorage.getItem('pv.lastTemplateTab'); } catch (e) { /* sin almacenamiento */ }
+    }
+    document.getElementById('navPlantillas').setAttribute('href', '#' + (state.lastTemplateTab || 'resumen'));
+    document.querySelectorAll('.mainnav a').forEach(function (a) {
+      var on = a.getAttribute('data-section') === (inPortfolio ? 'portafolio' : 'plantillas');
+      if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
     });
     update();
   }

@@ -20,6 +20,13 @@
         <div class="brand-sub" id="saveStatus">Cambios guardados en este navegador</div>
       </div>
     </div>
+    <nav class="mainnav" aria-label="Secciones principales">
+      <a href="#portafolio" data-section="portafolio">Portafolio</a>
+      <a href="#resumen" data-section="plantillas" id="navPlantillas">Plantillas de valoración</a>
+    </nav>
+    <button type="button" class="btn" id="btnData">Respaldo</button>
+  </div>
+  <div class="topbar-inner company-row" id="companyRow">
     <div class="company-bar">
       <label class="field compact">
         <span>Empresa</span>
@@ -30,7 +37,6 @@
         <button type="button" class="btn" id="btnDuplicate">Duplicar</button>
         <label class="btn file-btn" title="Carga una planilla de valoración .xlsx">Importar Excel<input type="file" id="xlsxInput" accept=".xlsx,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></label>
         <button type="button" class="btn" id="btnTikr">Pegar de TIKR</button>
-        <button type="button" class="btn" id="btnData">Respaldo</button>
         <button type="button" class="btn danger" id="btnDelete">Eliminar</button>
       </div>
     </div>
@@ -48,7 +54,7 @@
 
 <main class="wrap">
   <!-- Paso 0: datos básicos, siempre visibles -->
-  <section class="basics" aria-label="Datos básicos">
+  <section class="basics" id="basics" aria-label="Datos básicos">
     <label class="field">
       <span>Ticker</span>
       <input id="f-ticker" data-path="ticker" type="text" autocomplete="off" spellcheck="false">
@@ -75,8 +81,7 @@
     </div>
   </section>
 
-  <nav class="tabs" role="tablist" aria-label="Secciones">
-    <a role="tab" href="#portafolio" data-tab="portafolio">Portafolio</a>
+  <nav class="tabs" id="templateTabs" role="tablist" aria-label="Plantillas de valoración">
     <a role="tab" href="#resumen" data-tab="resumen">Resumen</a>
     <a role="tab" href="#filtro" data-tab="filtro"><b>1</b> Filtro</a>
     <a role="tab" href="#egm" data-tab="egm"><b>2</b> Earnings Growth</a>
