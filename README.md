@@ -78,6 +78,8 @@ Las celdas con fondo azul toman su valor de otra pestaña (por ejemplo, el PER h
 
 Todos los porcentajes se escriben como número: `12` = 12 %.
 
+**Recompras:** se escriben en negativo, porque reducen las acciones en circulación (`-2` = recompra el 2 % al año). Un valor positivo es dilución. Así, en el Filtro una recompra es "Good" (< 0), en el Modelo financiero las acciones bajan y en el EGM la recompra suma al shareholder yield. Al importar un Excel antiguo (donde la recompra iba en positivo) la app cambia el signo.
+
 ## Diferencias con el Excel
 
 - **CAGR real.** El Excel calculaba "CAGR" como retorno total ÷ 5. La app muestra el CAGR compuesto `(precio objetivo / precio)^(1/años) − 1` y, al lado, el valor del Excel para comparar.

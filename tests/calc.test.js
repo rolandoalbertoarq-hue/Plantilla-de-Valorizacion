@@ -12,11 +12,11 @@ const close = (a, b, eps = 1e-6) => assert.ok(Math.abs(a - b) < eps, `${a} != ${
 
 test('Filtro General: reglas del Excel', () => {
   const r = C.evaluateFilter('general', { perHist: 20, pfcfHist: 31, per: 18, pfcf: 25, evEbitda: 18,
-    revCagr: 12, epsCagr: 10, ndE: 1, roic: 16, buyback: 0, dividend: 1, fcfMargin: 20 });
+    revCagr: 12, epsCagr: 10, ndE: 1, roic: 16, buyback: -1, dividend: 1, fcfMargin: 20 });
   const pass = Object.fromEntries(r.rows.map(x => [x.key, x.pass]));
   assert.deepStrictEqual(pass, { perHist: true, pfcfHist: false, per: true, pfcf: true, evEbitda: false,
-    revCagr: true, epsCagr: false, ndE: true, roic: true, buyback: false, dividend: true, fcfMargin: true });
-  assert.strictEqual(r.good, 8);
+    revCagr: true, epsCagr: false, ndE: true, roic: true, buyback: true, dividend: true, fcfMargin: true });
+  assert.strictEqual(r.good, 9);
 });
 
 test('Filtro: reglas editables', () => {
@@ -31,7 +31,7 @@ test('Múltiplo máximo por EPS CAGR', () => {
 });
 
 test('EGM lineal = B10 + C10 + 0,1*((E10-F10)/F10)', () => {
-  const e = C.egm({ epsGrowth: 12, buyback: 2, dividend: 1, perHist: 25, per: 20, years: 10, mode: 'linear' });
+  const e = C.egm({ epsGrowth: 12, buyback: -2, dividend: 1, perHist: 25, per: 20, years: 10, mode: 'linear' });
   close(e.total, 0.12 + 0.03 + 0.1 * (5 / 20));
 });
 
@@ -74,7 +74,7 @@ test('Método del curso: proyección y precios', () => {
   const c = { revenue: hist(1000), da: hist(50), ebit: hist(200), interest: hist(10), taxes: hist(38),
     minority: hist(0), shares: hist(100), capex: hist(40), leases: hist(5), cash: hist(300),
     debt: hist(200), leaseDebt: hist(20), goodwill: hist(100), equity: hist(800), netDebtProj: [-100] };
-  const k = C.course(c, { price: 20, growth: 10, ebitMargin: 20, taxRate: 20, buyback: 1,
+  const k = C.course(c, { price: 20, growth: 10, ebitMargin: 20, taxRate: 20, buyback: -1,
     multiples: { per: 15, pfcf: 15, evEbitda: 10, evEbit: 12 }, dividendYield: 2 });
   close(k.rev[7], 1100);
   close(k.ebit[7], 220);

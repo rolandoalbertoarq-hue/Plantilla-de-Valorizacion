@@ -96,6 +96,10 @@
     sections.forEach(function (s) {
       Object.keys(s.ratios).forEach(function (k) { if (out.ratios[k] === undefined || s === best) out.ratios[k] = s.ratios[k]; });
     });
+    if (typeof out.ratios.buyback === 'number' && out.ratios.buyback !== 0) {
+      out.ratios.buyback = -out.ratios.buyback; // convención de la app: negativo = recompra
+      log.push('Recompras con signo cambiado (en el Excel la recompra era positiva)');
+    }
     log.push('Filtro: plantilla ' + ({ general: 'General', reit: 'REITs', tech: 'Tecnológicas', services: 'Servicios', financial: 'Financieras' })[best.sector] + ' con ' + best.filled + ' ratios');
   }
 
@@ -178,7 +182,8 @@
     var t = sideValue(IS, function (l) { return l === 'tax rate'; });
     if (t.value !== null && !t.formula) a.taxRate = frac(t.value);
     var b = sideValue(IS, function (l) { return l === 'recompras'; });
-    if (b.value !== null && !b.formula) a.buyback = frac(b.value);
+    // en el Excel la recompra se escribía en positivo; la app usa negativo = recompra
+    if (b.value !== null && !b.formula) a.buyback = -frac(b.value);
 
     // Acciones proyectadas escritas a mano
     var sr = rowByLabel(IS, function (l) { return /^fully diluted shares/.test(l); });

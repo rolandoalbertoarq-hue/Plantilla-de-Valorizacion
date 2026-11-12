@@ -53,7 +53,7 @@
     epsCagr:    { label: 'EPS CAGR',               unit: '%' },
     ndE:        { label: 'Deuda neta / EBITDA',    unit: 'x' },
     roic:       { label: 'ROIC',                   unit: '%' },
-    buyback:    { label: 'Recompras (yield)',      unit: '%' },
+    buyback:    { label: 'Recompras (− = recompra)', unit: '%' },
     dividend:   { label: 'Dividendo (yield)',      unit: '%' },
     fcfMargin:  { label: 'Margen FCF',             unit: '%' }
   };
@@ -64,29 +64,29 @@
     general: { label: 'General', rules: [
       ['perHist', '<=', 20], ['pfcfHist', '<=', 30], ['per', '<=', 'ref:perHist'],
       ['pfcf', '<', 'ref:pfcfHist'], ['evEbitda', '<', 18], ['revCagr', '>', 10],
-      ['epsCagr', '>', 10], ['ndE', '<', 4], ['roic', '>', 15], ['buyback', '>', 0],
+      ['epsCagr', '>', 10], ['ndE', '<', 4], ['roic', '>', 15], ['buyback', '<', 0],
       ['dividend', '>', 0], ['fcfMargin', '>=', 20]
     ]},
     reit: { label: 'REITs', rules: [
       ['perHist', '<=', 20], ['pAffo', '<=', 24], ['per', '<', 'ref:perHist'],
       ['evEbitda', '<', 18], ['revCagr', '>', 10], ['epsCagr', '>', 10], ['ndE', '<', 4],
-      ['roic', '>', 15], ['buyback', '>', 0], ['dividend', '>', 0], ['fcfMargin', '>=', 20]
+      ['roic', '>', 15], ['buyback', '<', 0], ['dividend', '>', 0], ['fcfMargin', '>=', 20]
     ]},
     tech: { label: 'Tecnológicas', rules: [
       ['perHist', '<=', 30], ['pfcfHist', '<=', 30], ['per', '<=', 'ref:perHist'],
       ['pfcf', '<', 'ref:pfcfHist'], ['evEbitda', '<', 25], ['revCagr', '>', 10],
-      ['epsCagr', '>', 10], ['ndE', '<', 4], ['roic', '>', 15], ['buyback', '>', 0],
+      ['epsCagr', '>', 10], ['ndE', '<', 4], ['roic', '>', 15], ['buyback', '<', 0],
       ['dividend', '>', 0], ['fcfMargin', '>=', 20]
     ]},
     services: { label: 'Servicios', rules: [
       ['perHist', '<=', 30], ['bookToBill', '<', 1], ['per', '<', 'ref:perHist'],
       ['evEbitda', '<', 16], ['revCagr', '>', 10], ['epsCagr', '>', 10], ['ndE', '<', 4],
-      ['roic', '>', 15], ['buyback', '>', 0], ['dividend', '>', 0], ['fcfMargin', '>=', 20]
+      ['roic', '>', 15], ['buyback', '<', 0], ['dividend', '>', 0], ['fcfMargin', '>=', 20]
     ]},
     financial: { label: 'Financieras', rules: [
       ['perHist', '<=', 20], ['roe', '>', 15], ['pb', '<', 1.2], ['per', '<', 'ref:perHist'],
       ['evEbitda', '<', 18], ['revCagr', '>', 10], ['epsCagr', '>', 10], ['ndE', '<', 4],
-      ['buyback', '>', 0], ['dividend', '>', 0], ['fcfMargin', '>=', 20]
+      ['buyback', '<', 0], ['dividend', '>', 0], ['fcfMargin', '>=', 20]
     ]}
   };
 
@@ -151,7 +151,8 @@
     var g = pct(p.epsGrowth);
     var safety = num(p.safety) || 0; // % de margen de seguridad (p.ej. 30)
     if (g !== null) g = g * (1 - safety / 100);
-    var sy = (pct(p.buyback) || 0) + (pct(p.dividend) || 0);
+    // Recompras en negativo (salen acciones): suman al retorno. Dilución en positivo: resta.
+    var sy = -(pct(p.buyback) || 0) + (pct(p.dividend) || 0);
     var years = num(p.years) || 10;
     var perHist = num(p.perHist), per = num(p.per);
     var change = null;
@@ -297,8 +298,8 @@
       rev[i] = rev[i - 1] * (1 + g);
       growAll.forEach(function (s) { s[i] = s[i - 1] * (1 + g); });
       ebit[i] = rev[i] * margin;
-      // acciones: escritas a mano o reducidas por la tasa de recompra
-      sharesAuto[i] = shares[i - 1] * (1 - bb);
+      // acciones: escritas a mano o según el cambio anual (negativo = recompra, positivo = dilución)
+      sharesAuto[i] = shares[i - 1] * (1 + bb);
       var manual = num(c.sharesProj && c.sharesProj[i - HIST]);
       shares[i] = manual === null ? sharesAuto[i] : manual;
     }

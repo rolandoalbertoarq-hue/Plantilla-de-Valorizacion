@@ -7,7 +7,7 @@
   // ======================================================================
   // Almacenamiento (solo en este navegador)
   // ======================================================================
-  var KEYS = { companies: 'pv.companies.v1', current: 'pv.current.v1', rules: 'pv.rules.v1', seeds: 'pv.seeds.v1' };
+  var KEYS = { companies: 'pv.companies.v1', current: 'pv.current.v1', rules: 'pv.rules.v1', seeds: 'pv.seeds.v1', signs: 'pv.buybackSign.v2' };
   function lsGet(key, fallback) {
     try { var v = window.localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
     catch (e) { return fallback; }
@@ -29,7 +29,7 @@
       dividendYield: null };
     SERIES_KEYS.forEach(function (k) { course[k] = nulls(7); });
     return {
-      id: uid(), ticker: '', name: '', notes: '', excluded: [], price: null, shares: null, sector: 'general',
+      id: uid(), signConvention: 2, ticker: '', name: '', notes: '', excluded: [], price: null, shares: null, sector: 'general',
       baseYear: new Date().getFullYear(),
       ratios: {},
       egm: { epsGrowth: null, safety: 0, mode: 'linear', years: 10, hurdle: 15 },
@@ -47,7 +47,7 @@
     c.name = 'Empresa de ejemplo (datos ficticios)';
     c.price = 100; c.shares = 350; c.baseYear = 2026;
     c.ratios = { perHist: 24, pfcfHist: 25, per: 22, pfcf: 22.6, evEbitda: 14.6, revCagr: 11,
-      epsCagr: 13, ndE: 0.4, roic: 34, buyback: 1.1, dividend: 1.2, fcfMargin: 15.5, roe: 25 };
+      epsCagr: 13, ndE: 0.4, roic: 34, buyback: -1.1, dividend: 1.2, fcfMargin: 15.5, roe: 25 };
     c.eps.analyst = [4.6, 5.2, 5.9, 6.6, 7.4];
     c.ps.multiple = 3.8;
     c.graham.aaa = 5.3;
@@ -70,6 +70,21 @@
     k.assumptions.taxRate = 21;
     k.netDebtProj = [800, 600, 400, 200, 0];
     k.multiples.evEbit = 18;
+    return c;
+  }
+
+  /**
+   * Convención de signo de las recompras (desde nov-2026): negativo = recompra (salen acciones),
+   * positivo = dilución. Antes se escribía la recompra en positivo; las empresas guardadas o respaldadas
+   * con la convención anterior se convierten cambiando el signo.
+   */
+  function migrateBuybackSign(c) {
+    if (!c || c.signConvention === 2) return c;
+    if (c.ratios && typeof c.ratios.buyback === 'number') c.ratios.buyback = -c.ratios.buyback;
+    if (c.course && c.course.assumptions && typeof c.course.assumptions.buyback === 'number') {
+      c.course.assumptions.buyback = -c.course.assumptions.buyback;
+    }
+    c.signConvention = 2;
     return c;
   }
 
@@ -96,6 +111,17 @@
     courseSub: 'is',
     horizon: null
   };
+  if (state.companies) Object.keys(state.companies).forEach(function (id) { migrateBuybackSign(state.companies[id]); });
+  // reglas personalizadas de recompras hechas con la convención anterior: se vuelve a la regla por defecto
+  if (!lsGet(KEYS.signs, false)) {
+    Object.keys(state.rules || {}).forEach(function (sec) {
+      var def = C.SECTORS[sec];
+      if (!def || !state.rules[sec]) return;
+      def.rules.forEach(function (r, i) { if (r[0] === 'buyback') delete state.rules[sec][i]; });
+    });
+    lsSet(KEYS.rules, state.rules);
+    lsSet(KEYS.signs, true);
+  }
   if (!state.companies || !Object.keys(state.companies).length) {
     var d = demoCompany();
     state.companies = {}; state.companies[d.id] = d; state.currentId = d.id;
@@ -213,7 +239,7 @@
     'course.sharesProj.*': function (c, R, path) {
       var i = Number(path.split('.').pop());
       var v = R && R.course ? R.course.sharesAuto[7 + i] : null;
-      return [v === null || v === undefined ? null : round(v, 1), 'Año anterior − recompras'];
+      return [v === null || v === undefined ? null : round(v, 1), 'Año anterior + cambio de acciones'];
     },
     'course.netDebtProj.*': function (c, R, path) {
       var i = Number(path.split('.').pop());
@@ -636,7 +662,7 @@
       }).join('');
       return '<div class="view">' +
         '<div class="view-head"><h2>Filtro 1 · Plantilla de valoración</h2>' +
-        '<p>Elige el tipo de empresa. Cada tipo tiene sus ratios y su tolerancia con los múltiplos. Los datos se comparten entre tipos y alimentan las demás pestañas. Los porcentajes se escriben como número: 12 = 12 %.</p></div>' +
+        '<p>Elige el tipo de empresa. Cada tipo tiene sus ratios y su tolerancia con los múltiplos. Los datos se comparten entre tipos y alimentan las demás pestañas. Los porcentajes se escriben como número: 12 = 12 %. Recompras en negativo (−2 = recompra el 2 % de sus acciones); positivo es dilución.</p></div>' +
         '<div>' + seg('sector', sectors, c.sector) + '</div>' +
         '<div class="split wide-left">' +
         '<div class="panel"><div class="panel-head"><h3>Plantilla ' + esc(C.SECTORS[c.sector].label) + '</h3>' +
@@ -700,7 +726,7 @@
         '<div class="panel"><h3>Componentes</h3><div class="form-grid">' +
         field('EPS Growth', 'egm.epsGrowth', { unit: '%' }) +
         '<label class="field"><span>Margen de seguridad (%)</span>' + inp('egm.safety') + '<span class="hint">Recorta el crecimiento. Tu nota sugiere 30.</span></label>' +
-        field('Recompras', 'ratios.buyback', { unit: '%', hint: 'Mismo dato que en Filtro' }) +
+        field('Recompras', 'ratios.buyback', { unit: '%', hint: 'Negativo = recompra (suma al retorno). Mismo dato que en Filtro' }) +
         field('Dividendo', 'ratios.dividend', { unit: '%', hint: 'Mismo dato que en Filtro' }) +
         field('PER histórico', 'ratios.perHist', { unit: 'x', hint: 'Mismo dato que en Filtro' }) +
         field('PER actual', 'ratios.per', { unit: 'x', hint: 'Mismo dato que en Filtro' }) +
@@ -1004,7 +1030,7 @@
         field('Crecimiento ventas', 'course.assumptions.growth', { unit: '%' }) +
         field('Margen EBIT', 'course.assumptions.ebitMargin', { unit: '%' }) +
         field('Tasa impositiva', 'course.assumptions.taxRate', { unit: '%' }) +
-        field('Recompras (reduce acciones)', 'course.assumptions.buyback', { unit: '%' }) + '</div>';
+        field('Cambio anual de acciones (− = recompra)', 'course.assumptions.buyback', { unit: '%' }) + '</div>';
       if (sub === 'val') assumptions = '<div class="form-grid">' +
         field('Múltiplo PER', 'course.multiples.per', { unit: 'x' }) +
         field('Múltiplo P/FCF', 'course.multiples.pfcf', { unit: 'x' }) +
@@ -1234,7 +1260,7 @@
   var dataText = document.getElementById('dataText');
   var dataMsg = document.getElementById('dataMsg');
   function exportJson() {
-    return JSON.stringify({ app: 'plantilla-valoracion', version: 1, exportedAt: new Date().toISOString(),
+    return JSON.stringify({ app: 'plantilla-valoracion', version: 2, exportedAt: new Date().toISOString(),
       rules: state.rules, companies: Object.keys(state.companies).map(function (k) { return state.companies[k]; }) }, null, 2);
   }
   document.getElementById('btnData').addEventListener('click', function () {
@@ -1263,7 +1289,7 @@
     try { data = JSON.parse(txt); } catch (e) { dataMsg.textContent = 'El texto no es un JSON válido. Revisa que esté completo.'; return; }
     var list = Array.isArray(data) ? data : data.companies ? data.companies : [data];
     var n = 0;
-    list.forEach(function (c) { if (c && typeof c === 'object') { normalize(c); state.companies[c.id] = c; n++; } });
+    list.forEach(function (c) { if (c && typeof c === 'object') { migrateBuybackSign(c); normalize(c); state.companies[c.id] = c; n++; } });
     if (data.rules && typeof data.rules === 'object') state.rules = data.rules;
     if (!n) { dataMsg.textContent = 'No se encontraron empresas en el texto.'; return; }
     dataMsg.textContent = 'Importadas ' + n + ' empresa(s).';
