@@ -124,6 +124,7 @@
   }
   if (!state.companies || !Object.keys(state.companies).length) {
     var d = demoCompany();
+    d.updatedAt = new Date().toISOString();
     state.companies = {}; state.companies[d.id] = d; state.currentId = d.id;
   }
   // Empresas precargadas (js/seeds.js): se agregan una sola vez; si se eliminan no vuelven.
@@ -1134,6 +1135,40 @@
     var R = computeAll(co());
     refreshLinks(R);
     views[state.tab].update(R);
+    showUpdated();
+  }
+
+  // ---------------- Fecha de última actualización de los datos ----------------
+  function fmtDate(iso) {
+    var d = iso ? new Date(iso) : null;
+    if (!d || isNaN(d)) return null;
+    return d.toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+  function ageText(iso) {
+    var days = Math.floor((Date.now() - new Date(iso).getTime()) / 864e5);
+    if (days <= 0) return 'hoy';
+    if (days === 1) return 'ayer';
+    if (days < 31) return 'hace ' + days + ' días';
+    var months = Math.round(days / 30.4);
+    if (months < 12) return 'hace ' + months + (months === 1 ? ' mes' : ' meses');
+    var y = Math.floor(months / 12), m = months % 12;
+    return 'hace ' + y + (y === 1 ? ' año' : ' años') + (m ? ' y ' + m + (m === 1 ? ' mes' : ' meses') : '');
+  }
+  /** Etiqueta junto al nombre: verde hasta 30 días, ámbar hasta 90, rojo después. */
+  function showUpdated() {
+    var el = document.getElementById('updatedPill');
+    if (!el) return;
+    var c = co(), f = fmtDate(c.updatedAt);
+    if (!f) { el.className = 'pill na upd-pill'; el.textContent = 'Sin fecha de actualización'; return; }
+    var days = (Date.now() - new Date(c.updatedAt).getTime()) / 864e5;
+    el.className = 'pill upd-pill ' + (days <= 30 ? 'good' : days <= 90 ? 'warn' : 'bad');
+    el.textContent = 'Actualizado ' + f + ' · ' + ageText(c.updatedAt);
+  }
+  /** Marca la empresa como actualizada ahora (o en la fecha indicada). */
+  function touch(c, when) {
+    var prevDay = (c.updatedAt || '').slice(0, 10);
+    c.updatedAt = when || new Date().toISOString();
+    if (c.updatedAt.slice(0, 10) !== prevDay) fillSelect();
   }
 
   function fillBasics() {
@@ -1152,7 +1187,8 @@
       return companyLabel(state.companies[a]).localeCompare(companyLabel(state.companies[b]));
     });
     sel.innerHTML = ids.map(function (id) {
-      return '<option value="' + id + '"' + (id === state.currentId ? ' selected' : '') + '>' + esc(companyLabel(state.companies[id])) + '</option>';
+      var c = state.companies[id], f = fmtDate(c.updatedAt);
+      return '<option value="' + id + '"' + (id === state.currentId ? ' selected' : '') + '>' + esc(companyLabel(c)) + (f ? ' — ' + esc(f) : '') + '</option>';
     }).join('');
   }
   function switchTo(id) {
@@ -1178,6 +1214,7 @@
       var v = readInput(el);
       if (path === 'baseYear') { if (v === null) return; v = Math.round(v); }
       setPath(co(), path, v);
+      touch(co());
       // mismo dato mostrado en otro campo de la vista (p. ej. PER histórico dos veces)
       document.querySelectorAll('input[data-path="' + path + '"]').forEach(function (o) { if (o !== el) o.value = el.value; });
       if (path === 'ticker' || path === 'name') fillSelect();
@@ -1211,6 +1248,7 @@
       else if (path === '_courseSub') state.courseSub = value;
       else {
         setPath(co(), path, value);
+        touch(co());
         if (path === 'fcf.multipleMode') co().fcf.multiple = null;
         scheduleSave();
       }
@@ -1235,7 +1273,7 @@
   // Barra de empresa
   document.getElementById('companySelect').addEventListener('change', function (e) { switchTo(e.target.value); });
   document.getElementById('btnNew').addEventListener('click', function () {
-    var c = blankCompany(); state.companies[c.id] = c; switchTo(c.id);
+    var c = blankCompany(); touch(c); state.companies[c.id] = c; switchTo(c.id);
     document.getElementById('f-ticker').focus();
   });
   document.getElementById('btnDuplicate').addEventListener('click', function () {
@@ -1344,6 +1382,9 @@
         var c = normalize(res.company);
         if (!c.name) c.name = f.name.replace(/\.xlsx?$/i, '');
         c.notes = 'Importado de ' + f.name + '.';
+        // fecha de los datos: la del nombre del archivo (2025-06-23_GOOGL_PDV.xlsx) o hoy
+        var fd = /(\d{4}-\d{2}-\d{2})/.exec(f.name);
+        c.updatedAt = fd && !isNaN(new Date(fd[1] + 'T12:00:00')) ? new Date(fd[1] + 'T12:00:00').toISOString() : new Date().toISOString();
         state.companies[c.id] = c;
         switchTo(c.id);
         persist();
@@ -1416,6 +1457,7 @@
       TIKR_FIELDS.forEach(function (f) { c.course[f] = [null, null, null, null, null, null, null]; });
     }
     var n = window.Tikr.applyToCompany(c, p.res);
+    c.updatedAt = new Date().toISOString();
     // P/S y FCF parten del LTM: vinculados a las ventas y al FCF del Modelo financiero en el año base
     c.ps.revenue = null; c.ps.baseDataYear = null;
     c.fcf.base = null; c.fcf.baseDataYear = null;

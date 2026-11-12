@@ -240,16 +240,23 @@ window.SEED_COMPANIES = [
       "graham",
       "grahamRev"
     ],
-    "seedVersion": 2,
+    "seedVersion": 3,
     "seedUpdates": [
       {
         "version": 2,
         "pathsIfEmpty": [
           "ps.baseDataYear"
         ]
+      },
+      {
+        "version": 3,
+        "pathsIfEmpty": [
+          "updatedAt"
+        ]
       }
     ],
-    "signConvention": 2
+    "signConvention": 2,
+    "updatedAt": "2025-06-23T12:00:00.000Z"
   },
   {
     "id": "seed-nvda",
@@ -468,7 +475,7 @@ window.SEED_COMPANIES = [
         228984
       ]
     },
-    "seedVersion": 5,
+    "seedVersion": 6,
     "seedUpdates": [
       {
         "paths": [
@@ -491,8 +498,15 @@ window.SEED_COMPANIES = [
       {
         "version": 5,
         "notesPrefix": "Datos de TIKR (Libro1.xlsx: Income Statement"
+      },
+      {
+        "version": 6,
+        "pathsIfEmpty": [
+          "updatedAt"
+        ]
       }
     ],
-    "signConvention": 2
+    "signConvention": 2,
+    "updatedAt": "2026-11-12T12:00:00.000Z"
   }
 ];

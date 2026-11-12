@@ -74,6 +74,10 @@ Las empresas precargadas se agregan una sola vez por navegador; si las eliminas,
 
 Las celdas con fondo azul toman su valor de otra pestaña (por ejemplo, el PER histórico del Filtro alimenta EPS Proyectado, el EGM y la Valoración del Modelo financiero). Si escribes un valor propio, se usa el tuyo; si lo borras, vuelve al vínculo.
 
+### Fecha de actualización
+
+Junto al nombre de cada empresa aparece la última fecha en que se cambiaron sus datos y hace cuánto fue: en verde hasta 30 días, en ámbar hasta 90 y en rojo después. La lista de empresas también muestra la fecha. Se actualiza sola al editar cualquier dato o cargar datos de TIKR; al importar un Excel se toma la fecha del nombre del archivo si la tiene (`2025-06-23_GOOGL_PDV.xlsx`).
+
 ### Convención de porcentajes
 
 Todos los porcentajes se escriben como número: `12` = 12 %.
