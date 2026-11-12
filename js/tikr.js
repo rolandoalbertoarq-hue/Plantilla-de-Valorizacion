@@ -1,7 +1,7 @@
 /*
  * Lector de tablas de TIKR (Income Statement, Balance Sheet, Cash Flow).
  * Acepta texto copiado de TIKR (columnas separadas por tabulador) o una hoja de Excel
- * donde se pegaron esas tablas. Convierte los datos a los campos del método del curso.
+ * donde se pegaron esas tablas. Convierte los datos a los campos del Modelo financiero.
  * Funciones puras: se pueden probar con Node.
  */
 (function (root) {
@@ -192,7 +192,7 @@
       daFromEbitda: !cf && seen.da };
   }
 
-  /** Aplica el resultado a una empresa: rellena los 7 años históricos del curso terminando en el año base. */
+  /** Aplica el resultado a una empresa: rellena los 7 años históricos del Modelo financiero terminando en el año base. */
   function applyToCompany(company, res) {
     var by = res.baseYear;
     company.baseYear = by;

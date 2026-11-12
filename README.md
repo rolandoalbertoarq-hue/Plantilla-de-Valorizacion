@@ -16,14 +16,14 @@ Los datos se guardan en el navegador (localStorage). Usa **Respaldo** para copia
 El botón **Importar Excel** lee una planilla de valoración `.xlsx` y crea la empresa en la app. Busca los datos por las etiquetas de cada pestaña, así que funciona con la plantilla actual y con versiones anteriores (por ejemplo, las que solo tienen la tabla de Tecnológicas o 4 años de EPS). Importa:
 
 - Filtro 1: el tipo de empresa (la tabla que tenga datos), ticker y ratios.
-- 1–4 del curso: años históricos, supuestos (crecimiento, margen EBIT, tasa impositiva), acciones y deuda neta proyectadas escritas a mano, múltiplos y dividend yield.
+- 1–4 (Modelo financiero): años históricos, supuestos (crecimiento, margen EBIT, tasa impositiva), acciones y deuda neta proyectadas escritas a mano, múltiplos y dividend yield.
 - EPS Proyectado (analistas y crecimiento propio), Fórmula de Graham, PS y FCF Proyectado.
 
 Los métodos que el Excel no usaba quedan desmarcados en el Resumen. Siempre revisa los datos después de importar.
 
 ## Pegar de TIKR
 
-El botón **Pegar de TIKR** carga los estados financieros de TIKR en el método del curso:
+El botón **Pegar de TIKR** carga los estados financieros de TIKR en el Modelo financiero:
 
 1. En TIKR, abre Financials y copia la tabla completa (incluida la fila del título, con las fechas y LTM) del **Income Statement**, el **Balance Sheet** y el **Cash Flow**.
 2. Pégalas una debajo de otra en el cuadro, o pégalas en un Excel y usa **Importar Excel**.
@@ -31,7 +31,7 @@ El botón **Pegar de TIKR** carga los estados financieros de TIKR en el método 
 
 Cómo se traduce cada dato:
 
-| Método del curso | TIKR |
+| Modelo financiero | TIKR |
 |---|---|
 | Ventas | Total Revenues |
 | EBIT | Operating Income |
@@ -51,7 +51,7 @@ Con esto la deuda neta coincide con la "Net Debt" de TIKR. El LTM queda como añ
 ## Empresas precargadas
 
 - **DEMO**: ejemplo con datos ficticios (solo aparece si no tienes empresas guardadas).
-- **NVDA**: datos de TIKR al 11-nov-2026 (los tres estados) para probar el método del curso. Los supuestos de proyección son de prueba; están explicados en las notas de la empresa.
+- **NVDA**: datos de TIKR al 11-nov-2026 (los tres estados) para probar el Modelo financiero. Los supuestos de proyección son de prueba; están explicados en las notas de la empresa.
 - **GOOGL**: importada de `2025-06-23_GOOGL_PDV.xlsx`, con precio y datos a junio de 2025. Reproduce los mismos precios objetivo que ese Excel (hay una prueba que lo comprueba).
 
 Las empresas precargadas se agregan una sola vez por navegador; si las eliminas, no vuelven. Están en `js/seeds.js`.
@@ -66,11 +66,11 @@ Las empresas precargadas se agregan una sola vez por navegador; si las eliminas,
 | **2 · Earnings Growth** | F2-EGM, inst-EGM | Modelo de Compound Quality: EPS growth + shareholder yield ± cambio de valoración. Margen de seguridad, regla del 72 y retorno mínimo exigido. |
 | **3 · EPS · P/S · FCF** | EPS Proyectado, PS Proyectado, FCF Proyectado | Las tres proyecciones por múltiplo en una sola pestaña, con gráfico comparativo. |
 | **4 · Graham** | EPS Proyectado (Fórmula de Graham) | Crecimiento implícito `(PER NTM − 8,5) / 2`, PER justo, valor justo y versión revisada con el bono AAA. Incluye guía de dónde sacar cada variable. |
-| **5 · Método del curso** | 1. Income statement, 2. Flujos de caja, 3. Retornos capital, 4. Valoración | Las cuatro pestañas numeradas como un solo método, con sub-pestañas. |
+| **5 · Modelo financiero** | 1. Income statement, 2. Flujos de caja, 3. Retornos capital, 4. Valoración | El método del curso: las cuatro pestañas numeradas como un solo modelo, con sub-pestañas. Proyecta los estados financieros 5 años y los valora con PER, P/FCF, EV/EBITDA y EV/EBIT. |
 
 ### Datos vinculados
 
-Las celdas con fondo azul toman su valor de otra pestaña (por ejemplo, el PER histórico del Filtro alimenta EPS Proyectado, el EGM y la Valoración del curso). Si escribes un valor propio, se usa el tuyo; si lo borras, vuelve al vínculo.
+Las celdas con fondo azul toman su valor de otra pestaña (por ejemplo, el PER histórico del Filtro alimenta EPS Proyectado, el EGM y la Valoración del Modelo financiero). Si escribes un valor propio, se usa el tuyo; si lo borras, vuelve al vínculo.
 
 ### Convención de porcentajes
 

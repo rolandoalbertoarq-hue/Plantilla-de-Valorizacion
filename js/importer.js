@@ -99,7 +99,7 @@
     log.push('Filtro: plantilla ' + ({ general: 'General', reit: 'REITs', tech: 'Tecnológicas', services: 'Servicios', financial: 'Financieras' })[best.sector] + ' con ' + best.filled + ' ratios');
   }
 
-  // ------------------------------------------------- Pestañas 1–4 del curso
+  // ------------------------------- Pestañas 1–4 del Excel (Modelo financiero)
   function yearRow(S) {
     for (var r = 0; r <= Math.min(S.maxR, 20); r++) {
       var cols = [];
@@ -205,7 +205,7 @@
       var dy = sideValue(V, function (l) { return l === 'dividend yield'; });
       if (dy.value !== null && !dy.formula) out.course.dividendYield = frac(dy.value);
     }
-    log.push('Método del curso: año base ' + base + ', ' + filled + ' datos históricos');
+    log.push('Modelo financiero: año base ' + base + ', ' + filled + ' datos históricos');
   }
 
   // ------------------------------------------------------- EPS Proyectado

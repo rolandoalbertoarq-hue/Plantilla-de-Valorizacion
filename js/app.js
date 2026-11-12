@@ -166,12 +166,12 @@
     'eps.cagr': function (c) { return [c.ratios.epsCagr, 'Filtro · EPS CAGR']; },
     'ps.revenue': function (c) {
       var v = num(c.course.revenue[6]);
-      return [v || null, 'Método del curso · ventas ' + c.baseYear];
+      return [v || null, 'Modelo financiero · ventas ' + c.baseYear];
     },
     'ps.growth.*': function (c) { return [c.ratios.revCagr, 'Filtro · Rev CAGR']; },
     'fcf.base': function (c, R) {
       var v = R && R.course ? R.course.fcf[6] : null;
-      return [v ? Math.round(v * 100) / 100 : null, 'Método del curso · FCF ' + c.baseYear];
+      return [v ? Math.round(v * 100) / 100 : null, 'Modelo financiero · FCF ' + c.baseYear];
     },
     'fcf.growth.*': function (c) { return [c.ratios.revCagr, 'Filtro · Rev CAGR']; },
     'fcf.multiple': function (c) {
@@ -242,7 +242,7 @@
     R.filter = C.evaluateFilter(c.sector, c.ratios, state.rules[c.sector]);
     R.maxMult = C.maxMultiples(c.ratios.epsCagr);
 
-    // Método del curso primero: otras pestañas toman datos de aquí.
+    // Modelo financiero primero: otras pestañas toman datos de aquí.
     var ctx = {
       price: price,
       growth: val(c, 'course.assumptions.growth'),
@@ -297,10 +297,10 @@
       { key: 'epsG', name: 'EPS propio × PER hist.', tab: 'multiplos', byYear: fromRows(R.epsG), offset: 1 },
       { key: 'ps', name: 'Price to Sales', tab: 'multiplos', byYear: fromRows(R.ps), offset: 1 },
       { key: 'fcf', name: 'FCF × múltiplo', tab: 'multiplos', byYear: fromRows(R.fcf), offset: 1 },
-      { key: 'cPer', name: 'Curso · PER', tab: 'curso', byYear: fromCourse(R.course.methods.per.prices), offset: 0 },
-      { key: 'cPfcf', name: 'Curso · P/FCF', tab: 'curso', byYear: fromCourse(R.course.methods.pfcf.prices), offset: 0 },
-      { key: 'cEvEbitda', name: 'Curso · EV/EBITDA', tab: 'curso', byYear: fromCourse(R.course.methods.evEbitda.prices), offset: 0 },
-      { key: 'cEvEbit', name: 'Curso · EV/EBIT', tab: 'curso', byYear: fromCourse(R.course.methods.evEbit.prices), offset: 0 }
+      { key: 'cPer', name: 'Modelo · PER', tab: 'modelo', byYear: fromCourse(R.course.methods.per.prices), offset: 0 },
+      { key: 'cPfcf', name: 'Modelo · P/FCF', tab: 'modelo', byYear: fromCourse(R.course.methods.pfcf.prices), offset: 0 },
+      { key: 'cEvEbitda', name: 'Modelo · EV/EBITDA', tab: 'modelo', byYear: fromCourse(R.course.methods.evEbitda.prices), offset: 0 },
+      { key: 'cEvEbit', name: 'Modelo · EV/EBIT', tab: 'modelo', byYear: fromCourse(R.course.methods.evEbit.prices), offset: 0 }
     ];
     return list;
   }
@@ -517,7 +517,7 @@
         '<div class="chart-box tall"><canvas id="chFootball" aria-label="Precio objetivo por método"></canvas></div></div>' +
         '<div class="grid-2">' +
         '<div class="panel"><h3>Detalle por método</h3><div class="table-wrap"><table id="sumTable"></table></div>' +
-        '<p class="hint">Desmarca un método para sacarlo del gráfico y de la mediana (por ejemplo, si no aplica a esta empresa). CAGR: en las pestañas EPS, P/S y FCF el año base cuenta como el año 1 (igual que tu Excel). En el método del curso el año base es el punto de partida. Graham no tiene año: es un valor justo de hoy.</p></div>' +
+        '<p class="hint">Desmarca un método para sacarlo del gráfico y de la mediana (por ejemplo, si no aplica a esta empresa). CAGR: en las pestañas EPS, P/S y FCF el año base cuenta como el año 1 (igual que tu Excel). En el Modelo financiero el año base es el punto de partida. Graham no tiene año: es un valor justo de hoy.</p></div>' +
         '<div class="panel"><h3>Trayectoria del precio objetivo</h3><div class="chart-box"><canvas id="chPaths"></canvas></div></div>' +
         '</div>' +
         '<div class="panel"><div class="panel-head"><h3>Notas de la tesis</h3><p>Se guardan con la empresa</p></div>' +
@@ -588,7 +588,7 @@
       var ds = list.filter(function (m) { return excluded.indexOf(m.key) < 0; }).map(function (m, i) {
         return { label: m.name, data: years.map(function (y) { var v = m.byYear[y]; return ok(v) && v > 0 ? v : null; }),
           borderColor: pal[i % pal.length], backgroundColor: pal[i % pal.length], borderWidth: 2,
-          borderDash: m.tab === 'curso' ? [6, 3] : [], pointRadius: 2.5, spanGaps: true, tension: 0.25 };
+          borderDash: m.tab === 'modelo' ? [6, 3] : [], pointRadius: 2.5, spanGaps: true, tension: 0.25 };
       }).filter(function (d) { return d.data.some(ok); });
       drawChart('chPaths', {
         type: 'line', data: { labels: years.map(String), datasets: ds },
@@ -887,7 +887,7 @@
   }
 
   // ======================================================================
-  // VISTA: MÉTODO DEL CURSO (pestañas 1–4 del Excel)
+  // VISTA: MODELO FINANCIERO (pestañas 1–4 del Excel, método del curso)
   // ======================================================================
   var COURSE_TABLES = {
     is: [
@@ -959,7 +959,7 @@
     val: ['La deuda neta futura es una estimación tuya. Si tiene caja neta, escríbela en negativo; si la caja se acumula, irá creciendo en negativo.', 'Con PER y P/FCF la caja neta se suma al valor; la deuda no se resta porque el beneficio ya descuenta intereses. Con EV/EBITDA y EV/EBIT siempre se resta la deuda neta.', 'CAGR incluye el dividend yield, igual que tu Excel.']
   };
 
-  views.curso = {
+  views.modelo = {
     render: function () {
       var c = co(), by = Number(c.baseYear), sub = state.courseSub;
       var years = []; for (var i = 0; i < 12; i++) years.push(by - 6 + i);
@@ -992,12 +992,12 @@
         field('Dividend yield', 'course.dividendYield', { unit: '%' }) + '</div>' +
         '<p class="hint" id="curMult"></p>';
       if (sub === 'cf' || sub === 'rc') assumptions = '<p class="muted">Las columnas proyectadas crecen al mismo ritmo que las ventas (' +
-        '<a href="#curso" data-sub="is">supuesto en Estado de resultados</a>).</p>';
+        '<a href="#modelo" data-sub="is">supuesto en Estado de resultados</a>).</p>';
 
       var titles = { is: '1 · Estado de resultados', cf: '2 · Flujos de caja', rc: '3 · Retornos sobre el capital', val: '4 · Valoración' };
       var chartTitles = { is: 'Ventas, EBIT y beneficio neto', cf: 'Flujo de caja libre', rc: 'Rentabilidad sobre el capital', val: 'Precio objetivo por múltiplo' };
       return '<div class="view">' +
-        '<div class="view-head"><h2>Método del curso</h2><p>Las cuatro pestañas numeradas del Excel forman un solo método: proyectas los estados financieros 5 años y los valoras con 4 múltiplos. Rellena los años históricos; las columnas en azul se calculan solas.</p></div>' +
+        '<div class="view-head"><h2>Modelo financiero</h2><p>Las cuatro pestañas numeradas de tu Excel (el método del curso) forman un solo modelo: proyectas los estados financieros 5 años y los valoras con 4 múltiplos. Rellena los años históricos; las columnas en azul se calculan solas.</p></div>' +
         '<div>' + seg('_courseSub', [['is', '1 · Estado de resultados'], ['cf', '2 · Flujos de caja'], ['rc', '3 · Retornos capital'], ['val', '4 · Valoración']], sub) + '</div>' +
         (sub === 'val' ? '<div class="kpis" id="valKpis"></div>' : '') +
         '<div class="panel"><div class="panel-head"><h3>' + titles[sub] + '</h3></div>' + assumptions +
@@ -1072,7 +1072,7 @@
   // ======================================================================
   // Control general
   // ======================================================================
-  var TABS = ['resumen', 'filtro', 'egm', 'multiplos', 'graham', 'curso'];
+  var TABS = ['resumen', 'filtro', 'egm', 'multiplos', 'graham', 'modelo'];
 
   function renderView() {
     destroyCharts();
@@ -1179,6 +1179,7 @@
 
   function onHash() {
     var h = (location.hash || '').replace('#', '');
+    if (h === 'curso') h = 'modelo'; // enlaces guardados con el nombre anterior
     state.tab = TABS.indexOf(h) >= 0 ? h : 'resumen';
     renderView();
   }
@@ -1364,7 +1365,7 @@
       state.companies[c.id] = c;
     } else {
       c = co();
-      // se reemplazan los históricos del curso por los de TIKR
+      // se reemplazan los históricos del Modelo financiero por los de TIKR
       TIKR_FIELDS.forEach(function (f) { c.course[f] = [null, null, null, null, null, null, null]; });
     }
     var n = window.Tikr.applyToCompany(c, p.res);
@@ -1375,9 +1376,9 @@
     tikrDlg.close ? tikrDlg.close() : tikrDlg.removeAttribute('open');
     state.courseSub = 'is';
     switchTo(c.id);
-    if (location.hash !== '#curso') location.hash = '#curso';
+    if (location.hash !== '#modelo') location.hash = '#modelo';
     var miss = p.res.missing.map(function (m) { return window.Tikr.FIELD_LABELS[m] || m; });
-    notice('<b>Datos de TIKR cargados</b> en el método del curso: ' + n + ' valores, año base ' + p.res.baseYear + ' (LTM). ' +
+    notice('<b>Datos de TIKR cargados</b> en el Modelo financiero: ' + n + ' valores, año base ' + p.res.baseYear + ' (LTM). ' +
       (miss.length ? 'Falta: ' + esc(miss.join(', ')) + '. ' : '') +
       'Revisa los supuestos de proyección y los múltiplos.' + (c.price ? '' : ' Escribe el precio actual arriba.'), miss.length ? '' : 'good');
     persist();
