@@ -824,7 +824,7 @@
         '<div class="chart-box tall"><canvas id="chFootball" aria-label="Precio objetivo por método"></canvas></div></div>' +
         '<div class="grid-2">' +
         '<div class="panel"><h3>Detalle por método</h3><div class="table-wrap"><table id="sumTable"></table></div>' +
-        '<p class="hint">Desmarca un método para sacarlo del gráfico y de la mediana (por ejemplo, si no aplica a esta empresa). CAGR: en las pestañas EPS, P/S y FCF el año base cuenta como el año 1 (igual que tu Excel). En el Modelo financiero el año base es el punto de partida. Graham no tiene año: es un valor justo de hoy.</p></div>' +
+        '<p class="hint">Desmarca un método para sacarlo del gráfico y de la mediana (por ejemplo, si no aplica a esta empresa). CAGR: en las pestañas EPS, P/S y FCF el año base cuenta como el año 1 (igual que tu Excel). En el Modelo financiero el año base es el punto de partida. Graham no tiene año: es un valor justo de hoy. La fila Promedio es el promedio simple de los objetivos marcados (la línea azul del gráfico) y su CAGR va del precio actual a ese promedio, contando los años desde el año base hasta el año elegido (año base + 1 = 1 año).</p></div>' +
         '<div class="panel"><h3>Trayectoria del precio objetivo</h3><div class="chart-box"><canvas id="chPaths"></canvas></div></div>' +
         '</div>' +
         '<div class="panel"><div class="panel-head"><h3>Notas de la tesis</h3><p>Se guardan con la empresa</p></div>' +
@@ -850,6 +850,10 @@
       var med = median(valid.map(function (r) { return r.target; }));
       var avg = valid.length ? valid.reduce(function (sum, r) { return sum + r.target; }, 0) / valid.length : null;
       var medUp = C.upside(med, price);
+      // CAGR entre el precio actual y el objetivo promedio: años desde el año base hasta el año elegido
+      var avgYears = Y - R.baseYear;
+      var avgUp = C.upside(avg, price);
+      var avgCagr = avgYears > 0 ? C.cagr(avg, price, avgYears) : null;
       var above = valid.filter(function (r) { return r.target > price; }).length;
 
       var verdict = '';
@@ -862,6 +866,10 @@
       setText('sumKpis',
         kpi('Precio actual', money(price), esc((c.ticker || '').toUpperCase() || 'Sin ticker')) +
         kpi('Objetivo mediano ' + Y, money(med), '<span class="' + signCls(medUp) + '">' + pctf(medUp, true) + '</span> · ' + valid.length + ' métodos ' + verdict, true) +
+        kpi('CAGR al objetivo promedio ' + Y, '<span class="' + signCls(avgCagr) + '">' + pctf(avgCagr, true) + '</span>',
+          !valid.length ? 'Marca al menos un método' :
+          avgYears > 0 ? money(avg) + ' · ' + avgYears + (avgYears === 1 ? ' año' : ' años') + ' desde el precio actual (' + pctf(avgUp, true) + ')' :
+          'Elige un año posterior a ' + R.baseYear + ' (año base)', true) +
         kpi('Métodos sobre el precio', valid.length ? above + ' de ' + valid.length : '—', 'Cuántos métodos dan un objetivo mayor al precio actual') +
         kpi('Retorno esperado (EGM)', pctf(e.total), ok(e.doublingYears) ? 'Duplica en ' + NF1.format(e.doublingYears) + ' años (regla del 72)' : 'Completa el Earnings Growth Model') +
         kpi('Filtro · ' + C.SECTORS[c.sector].label, f.evaluated ? f.good + ' / ' + f.evaluated : '—', f.evaluated < f.total ? (f.total - f.evaluated) + ' ratios sin dato' : 'Ratios en "Good"'));
@@ -871,7 +879,9 @@
           return '<tr class="' + (r.off ? 'off' : '') + '"><td><span class="method-cell"><input type="checkbox" data-method="' + r.key + '"' + (r.off ? '' : ' checked') +
             ' aria-label="Incluir ' + esc(r.name) + ' en el resumen"><a href="#' + r.tab + '">' + esc(r.name) + '</a></span></td><td>' + money(r.target) + '</td><td class="' + signCls(r.upside) + '">' +
             pctf(r.upside, true) + '</td><td class="' + signCls(r.cagr) + '">' + pctf(r.cagr, true) + '</td></tr>';
-        }).join('') + '</tbody>');
+        }).join('') +
+        (valid.length ? '<tr class="total"><td>Promedio (' + valid.length + (valid.length === 1 ? ' método marcado' : ' métodos marcados') + ')</td><td>' + money(avg) + '</td><td class="' + signCls(avgUp) + '">' +
+          pctf(avgUp, true) + '</td><td class="' + signCls(avgCagr) + '">' + pctf(avgCagr, true) + '</td></tr>' : '') + '</tbody>');
 
       var good = tok('--good'), bad = tok('--bad'), priceC = tok('--price');
       var maxV = Math.max.apply(null, valid.map(function (r) { return r.target; }).concat([price || 0]));

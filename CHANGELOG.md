@@ -1,5 +1,9 @@
 # Historial de versiones
 
+## Versión 4 — en curso
+
+- **CAGR al objetivo promedio** en el Resumen: con los métodos marcados y el año elegido (2027 a 2031), una tarjeta y una fila "Promedio" en el detalle muestran el CAGR entre el precio actual y el precio objetivo promedio (la línea azul del gráfico). Los años se cuentan desde el año base: 2027 = 1 año y 2031 = 5 años si el año base es 2026. En el año base no hay CAGR.
+
 ## Versión 3 — commit `1cc8de1`
 
 - **Múltiplos editables en Valoración (Modelo financiero)**: cada casilla muestra el múltiplo que se usa, del Filtro o propio, y se puede retocar directamente. Una etiqueta indica el origen (Filtro, Actual o Propio) y el botón "Restablecer con datos del Filtro" vuelve a vincular los múltiplos y el dividend yield.

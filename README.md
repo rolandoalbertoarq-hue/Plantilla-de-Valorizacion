@@ -68,7 +68,7 @@ Las empresas precargadas se agregan una sola vez por navegador; si las eliminas,
 | Pestaña | Viene del Excel | Qué hace |
 |---|---|---|
 | **Datos básicos** (arriba, siempre visibles) | Filtro 1 | Ticker, precio actual, n° de acciones (millones) y año base. |
-| **Resumen** | — (nuevo) | Precio objetivo de todos los métodos para el año elegido, frente al precio actual. Mediana, potencial y CAGR. Puedes desmarcar métodos que no apliquen y escribir notas de la tesis. |
+| **Resumen** | — (nuevo) | Precio objetivo de todos los métodos para el año elegido, frente al precio actual. Mediana, potencial y CAGR. Fila Promedio con el CAGR entre el precio actual y el objetivo promedio de los métodos marcados para el año elegido (años contados desde el año base: año base + 1 = 1 año). Puedes desmarcar métodos que no apliquen y escribir notas de la tesis. |
 | **1 · Filtro** | Filtro 1 | Plantillas General, REITs, Tecnológicas, Servicios y Financieras. Calificación Good/Not, reglas editables y múltiplo máximo según crecimiento. |
 | **2 · Earnings Growth** | F2-EGM, inst-EGM | Modelo de Compound Quality: EPS growth + shareholder yield ± cambio de valoración. Margen de seguridad, regla del 72 y retorno mínimo exigido. |
 | **3 · EPS · P/S · FCF** | EPS Proyectado, PS Proyectado, FCF Proyectado | Las tres proyecciones por múltiplo en una sola pestaña, con gráfico comparativo. |
