@@ -1,6 +1,6 @@
 # Historial de versiones
 
-## Versión 3 — etiqueta `v3` · aprobada el 13-nov-2026
+## Versión 3 — commit `b821f89` (etiqueta `v3`) · aprobada el 13-nov-2026
 
 - **CAGR al objetivo promedio** en el Resumen: con los métodos marcados y el año elegido (2027 a 2031), una tarjeta y una fila "Promedio" en el detalle muestran el CAGR entre el precio actual y el precio objetivo promedio (la línea azul del gráfico). Los años se cuentan desde el año base: 2027 = 1 año y 2031 = 5 años si el año base es 2026. En el año base no hay CAGR.
 - **Múltiplos editables en Valoración (Modelo financiero)**: cada casilla muestra el múltiplo que se usa, del Filtro o propio, y se puede retocar directamente. Una etiqueta indica el origen (Filtro, Actual o Propio) y el botón "Restablecer con datos del Filtro" vuelve a vincular los múltiplos y el dividend yield.
@@ -28,4 +28,4 @@
 - GOOGL precargada desde `2025-06-23_GOOGL_PDV.xlsx`.
 - Línea de precio objetivo promedio en el gráfico por método.
 
-Para volver a una versión: `git checkout 098a82b` (v1), `git checkout 710ea7b` (v2) o `git checkout v3` (v3, incluye el CAGR al objetivo promedio), o crea una Release en GitHub sobre ese commit o etiqueta.
+Para volver a una versión: `git checkout 098a82b` (v1), `git checkout 710ea7b` (v2) o `git checkout b821f89` (v3, incluye el CAGR al objetivo promedio), o crea una Release en GitHub sobre ese commit o etiqueta.
